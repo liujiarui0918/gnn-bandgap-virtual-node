@@ -1,0 +1,160 @@
+\documentclass{beamer}
+
+\usepackage{ctex}
+\usepackage{amsmath, amsfonts, amssymb, bm}
+\usepackage{graphicx}
+\usepackage{hyperref}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{ragged2e}
+
+\usetheme{Berlin}
+\usecolortheme{whale}
+\useinnertheme[shadow=true]{rounded}
+\usefonttheme[onlymath]{serif}
+\setbeamercovered{transparent}
+\setbeamertemplate{navigation symbols}{}
+
+\setbeamertemplate{footline}{%
+ \leavevmode%
+ \hbox{%
+ \begin{beamercolorbox}[wd=.31\paperwidth,ht=2.25ex,dp=1ex,center]{author in head/foot}
+ \insertshortauthor
+ \end{beamercolorbox}%
+ \begin{beamercolorbox}[wd=.38\paperwidth,ht=2.25ex,dp=1ex,center]{title in head/foot}
+ \insertshorttitle
+ \end{beamercolorbox}%
+ \begin{beamercolorbox}[wd=.31\paperwidth,ht=2.25ex,dp=1ex,center]{date in head/foot}
+ \insertshortdate \quad \insertframenumber/\inserttotalframenumber
+ \end{beamercolorbox}%
+ }
+}
+
+\title[Matbench GNN 进展汇报]{晶体带隙预测实验进展汇报}
+\author[刘嘉瑞]{汇报人：刘嘉瑞}
+\institute[Band Gap]{项目：基于晶体图神经网络的 band gap 预测}
+\date{2026年4月16日}
+
+\begin{document}
+
+\begin{frame}
+ \titlepage
+\end{frame}
+
+\begin{frame}{汇报目标}
+\begin{itemize}
+  \item 当前目标是在鸿之微 \texttt{crystal\_band\_100000} 数据上完成 6 组忠实复现实验。
+  \item 任务是材料晶体的 \textbf{band gap 回归预测}，主指标为 MAE，辅以 RMSE、$R^2$ 和金属分类 F1。
+  \item 当前训练运行在单卡 RTX 3090 环境，统一固定随机种子 42，所有实验强制训练 50 个 epoch。
+  \item 截至本次汇报，E1--E4 已经拿到正式结果，E5 正在运行，E6 尚未启动。
+\end{itemize}
+\end{frame}
+
+\begin{frame}{数据集与任务定义}
+\small
+\begin{itemize}
+  \item 数据来源：鸿之微 \texttt{crystal\_band\_100000.jsonl}。
+  \item 清洗后有效样本数：\textbf{95,497}。
+  \item 划分方式：训练集 \textbf{76,397}，验证集 \textbf{9,549}，测试集 \textbf{9,551}。
+  \item 主预测目标：\textbf{band\_gap}（单位 eV）。
+  \item 可用辅助字段：\texttt{cbm}, \texttt{vbm}, \texttt{gap\_type}, \texttt{formula}, \texttt{density} 等。
+  \item 当前任务定义：
+  \begin{itemize}
+    \item 主任务：band gap 回归。
+    \item 辅助分析：band\_gap=0 与 band\_gap$>$0 的金属/非金属分类 F1。
+    \item E6 中会额外利用 CBM/VBM 做辅助损失和物理一致性约束。
+  \end{itemize}
+\end{itemize}
+\end{frame}
+
+\begin{frame}{实验矩阵}
+\scriptsize
+\centering
+\setlength{\tabcolsep}{3pt}
+\begin{tabular}{p{0.8cm} p{2.6cm} p{4.5cm} p{1.4cm}}
+\toprule
+编号 & 模型 & 核心设置 & 当前状态 \\
+\midrule
+E1 & CGCNN Baseline & 原子图卷积基线，3 层卷积，隐藏维 128 & 已完成 \\
+E2 & ALIGNN Baseline & 原子图 + line graph，4+4 层，隐藏维 256 & 已完成 \\
+E3 & M3GNet Baseline & 三体几何建模，3 个 block，单位维 128 & 已完成 \\
+E4 & ALIGNN + Virtual Node & 在 ALIGNN 基线上加入全局虚拟节点聚合与广播 & 已完成 \\
+E5 & ALIGNN + Transformer & 在 ALIGNN 表征后加入 2 层、4 头 Transformer 编码器 & 进行中 \\
+E6 & ALIGNN + Physics Constraint & 在 ALIGNN 上加入 band gap / CBM / VBM 多头与物理一致性损失 & 待启动 \\
+\bottomrule
+\end{tabular}
+
+\vspace{2mm}
+\footnotesize
+说明：三个改进实验都统一建立在最强基线 ALIGNN 之上，保证横向比较清晰。
+\end{frame}
+
+\begin{frame}{已完成实验结果（E1--E4）}
+\scriptsize
+\centering
+\begin{tabular}{p{3.1cm}cccc}
+\toprule
+实验 & MAE$\downarrow$ & RMSE$\downarrow$ & $R^2\uparrow$ & Metal F1$\uparrow$ \\
+\midrule
+E1 CGCNN Baseline & 0.3022 & 0.5303 & 0.8847 & 0.8069 \\
+E2 ALIGNN Baseline & 0.2314 & 0.4713 & 0.9089 & 0.8621 \\
+E3 M3GNet Baseline & 0.2680 & 0.5534 & 0.8744 & 0.8711 \\
+E4 ALIGNN + Virtual Node & \textbf{0.2201} & 0.4746 & 0.9077 & \textbf{0.8838} \\
+\bottomrule
+\end{tabular}
+
+\vspace{2mm}
+\small
+\begin{itemize}
+  \item 目前按 MAE 排序：\textbf{E4 > E2 > E3 > E1}。
+  \item 当前最强结果来自 E4，说明在 ALIGNN 上加入全局虚拟节点后，对 band gap 预测和金属判别都有提升。
+  \item E2 仍然是稳定而强的基线，因此后续 E5、E6 都围绕 ALIGNN 继续增强。
+\end{itemize}
+\end{frame}
+
+\begin{frame}{训练开销与完成情况}
+\scriptsize
+\centering
+\begin{tabular}{p{3.2cm}ccc}
+\toprule
+实验 & 实际训练轮数 & 训练时长（h） & 峰值显存（GB） \\
+\midrule
+E1 CGCNN Baseline & 50 & 2.08 & 0.79 \\
+E2 ALIGNN Baseline & 50 & 5.74 & 12.33 \\
+E3 M3GNet Baseline & 50 & 3.16 & 3.15 \\
+E4 ALIGNN + Virtual Node & 50 & 6.18 & 12.21 \\
+\bottomrule
+\end{tabular}
+
+\vspace{2mm}
+\small
+\begin{itemize}
+  \item 四个已完成实验全部跑满 50 个 epoch，没有提前停掉训练。
+  \item ALIGNN 系列训练时长明显高于 CGCNN，但精度也更好。
+  \item 当前缓存已迁移到数据盘，避免系统盘因 ALIGNN 图缓存而被写满。
+\end{itemize}
+\end{frame}
+
+\begin{frame}{正在进行与后续安排}
+\small
+\begin{itemize}
+  \item \textbf{E5 当前状态：}正在远端运行 \texttt{ALIGNN + Transformer}，目前尚未生成最终 \texttt{metrics.json}，日志显示仍处于图缓存/数据准备后的运行阶段。
+  \item \textbf{E6 设计内容：}在 ALIGNN 基线上增加 band gap、CBM、VBM 三个输出头，并加入物理一致性约束：
+  \[
+  L = L_{\text{bandgap}} + 0.3L_{\text{aux}} + 0.5L_{\text{phys}} + 0.1L_{\text{nonneg}}
+  \]
+  \item E6 中对 CBM/VBM 使用了有效性 mask，仅在这些字段有效的样本上计算辅助损失和物理约束，避免零占位样本污染训练。
+  \item 当前监控策略是每 30 分钟自动轮询远端状态；若日志报错，会抓取错误并自动进入调试与重跑流程。
+\end{itemize}
+\end{frame}
+
+\begin{frame}{阶段性结论}
+\begin{itemize}
+  \item 这批结果已经证明：\textbf{ALIGNN 是当前最强基线}，CGCNN 和 M3GNet 都落后于它。
+  \item 第一项改进 E4 已经实现了对 ALIGNN 的进一步提升，尤其在 MAE 和金属判别 F1 上效果明显。
+  \item 接下来最关键的是看 E5 的 Transformer 全局建模能否继续超过 E4，以及 E6 的物理约束能否在保持稳定性的同时进一步压低误差。
+  \item 现阶段可以对外汇报为：\textbf{数据集、任务、基线、增强方向和第一批结果都已经成型，项目已进入后两组增强实验的收尾阶段。}
+\end{itemize}
+\end{frame}
+
+\end{document}

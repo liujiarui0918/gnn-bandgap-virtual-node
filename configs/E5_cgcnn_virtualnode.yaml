@@ -1,0 +1,32 @@
+experiment_name: E5_CGCNN_virtualnode
+seed: 42
+data:
+  processed_dir: data/processed
+training:
+  device: auto
+  batch_size: 256
+  epochs: 50
+  optimizer: adam
+  lr: 0.001
+  weight_decay: 0.0
+  scheduler: plateau
+  scheduler_patience: 5
+  scheduler_factor: 0.5
+  early_stopping_patience: 10
+  mixed_precision: true
+  pin_memory: true
+  num_workers: 0
+  metal_threshold: 0.1
+  grad_clip_norm: 5.0
+  loss: mse
+model:
+  name: cgcnn_virtualnode
+  cutoff: 8.0
+  max_neighbors: 12
+  atom_embedding_dim: 64
+  edge_basis_dim: 41
+  hidden_dim: 128
+  num_layers: 4
+  graph_feature_dim: 8
+  dropout: 0.1
+

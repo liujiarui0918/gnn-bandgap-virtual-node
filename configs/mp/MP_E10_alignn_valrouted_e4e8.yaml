@@ -1,0 +1,28 @@
+experiment_name: MP_E10_ALIGNN_valrouted_e4e8
+runner: router
+seed: 42
+data:
+  dataset_root: data/mp_bandgap_official
+  cache_dir: data/mp_bandgap_official/alignn_cache
+  local_cache_root: /root/lanyun-tmp/gnn_mp_alignn_cache
+  cutoff: 8.0
+  cutoff_extra: 3.0
+  max_neighbors: 12
+  use_lmdb: true
+training:
+  device: auto
+  batch_size: 64
+  test_batch_size: 64
+  mixed_precision: false
+  pin_memory: true
+  num_workers: 0
+router:
+  runner_name: ALIGNN_ValRouted_E4_E8
+  primary_expert:
+    name: E4
+    config_path: configs/mp/MP_E4_alignn_virtualnode.yaml
+    checkpoint_path: results/mp_hzw_matched_e1_e12/MPHZW_E4_ALIGNN_virtualnode/best_model.pt
+  secondary_expert:
+    name: E8
+    config_path: configs/mp/MP_E8_alignn_multi_virtualnode.yaml
+    checkpoint_path: results/mp_hzw_matched_e1_e12/MPHZW_E8_ALIGNN_multi_virtualnode/best_model.pt

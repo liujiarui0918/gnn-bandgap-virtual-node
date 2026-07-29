@@ -1,0 +1,31 @@
+\documentclass[11pt,a4paper]{article}
+
+\usepackage[margin=1.9cm]{geometry}
+\usepackage{newtxtext,newtxmath}
+\usepackage{microtype}
+\usepackage[hidelinks]{hyperref}
+\usepackage{parskip}
+
+\setlength{\parindent}{0pt}
+\pagestyle{empty}
+
+\begin{document}
+
+\begin{center}
+{\Large\bfseries Course II Abstract}\\[0.35em]
+{\bfseries Ablation-Driven Design of Global Tokens and Robust Losses in Crystal GNNs}\\[0.25em]
+Liu Jiarui
+\end{center}
+
+\textbf{Abstract.}
+Graph neural networks provide an effective framework for learning from crystal structures because atoms, bonds, periodic neighborhoods, and bond angles can be represented naturally as graph-based features. However, standard message passing is primarily local: long-range information must be transmitted through multiple layers, which may cause oversmoothing, optimization difficulty, or weak global representation. This project investigates whether global-token mechanisms can improve crystal band-gap prediction, and whether such improvements remain stable under different data-label sources.
+
+The model-development process followed an ablation-driven workflow. CGCNN, ALIGNN, and M3GNet were first used as baselines. ALIGNN was selected as the main backbone because its atom graph and line graph explicitly encode local geometric relations. A plain virtual node was then introduced as a low-cost global token: it pools atom representations into a graph-level state and sends this global context back to all atoms. Several stronger-looking variants were further tested, including Transformer-style global attention, single and dual attentive virtual nodes, hard size-based routing, size-supervised adaptive dual slots, top-\(k\) node selection, top-\(k\) warm-up, and decayed global broadcasting. These designs were compared under the same regression target and evaluated with MAE, RMSE, \(R^2\), metal/non-metal classification behavior, learning curves, and residual distributions.
+
+The key empirical finding is that the simplest global-token design was more stable than many complex alternatives. On early HZW experiments, dual-slot and physics-constrained variants appeared promising, especially for larger structures. After moving to matched MP--HZW data and auditing structural and label consistency, these complex mechanisms became less reliable. In contrast, the single plain virtual node remained a strong modification to ALIGNN. Replacing mean-squared error with Huber loss further improved robustness by treating small errors quadratically while reducing the influence of extreme label conflicts or outliers. This change yielded consistent gains across both MP-label and HZW-label training.
+
+From a machine-learning perspective, the project suggests three lessons. First, inductive bias matters: a simple virtual node complements local geometric message passing without overwhelming it. Second, ablation is necessary: attention, dual slots, and routing mechanisms may increase capacity but can also learn dataset-specific noise. Third, robust objectives can be as important as model architecture when the training labels contain disagreement or heavy-tailed errors. The final recommendation is therefore not the most complex model, but a reproducible pipeline built on ALIGNN, a single global virtual node, rigorous data auditing, and Huber loss.
+
+\textbf{Keywords:} graph neural networks; ablation study; virtual token; attention; robust regression; Huber loss; crystal property prediction.
+
+\end{document}

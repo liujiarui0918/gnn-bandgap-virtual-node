@@ -1,0 +1,45 @@
+experiment_name: MP_E18_ALIGNN_regimemoe_virtualnode
+runner: alignn
+seed: 42
+data:
+  dataset_root: data/mp_bandgap_official
+  cache_dir: data/mp_bandgap_official/alignn_cache
+  local_cache_root: /root/lanyun-fs/gnn_alignn_cache_mp
+  cache_namespace: MP_E4_ALIGNN_virtualnode
+  cutoff: 8.0
+  cutoff_extra: 3.0
+  max_neighbors: 12
+  use_lmdb: true
+training:
+  device: auto
+  batch_size: 64
+  test_batch_size: 64
+  epochs: 50
+  optimizer: adamw
+  lr: 0.001
+  weight_decay: 0.00001
+  scheduler: onecycle
+  onecycle_max_lr: 0.001
+  mixed_precision: false
+  pin_memory: true
+  num_workers: 0
+  grad_clip_norm: 5.0
+  lambda_regime: 0.2
+  lambda_regime_expert: 0.4
+  metal_epsilon: 0.00000001
+  small_gap_threshold: 1.0
+model:
+  runner_name: ALIGNN_RegimeMoEVirtualNode
+  variant: regimemoevirtualnode
+  alignn_layers: 4
+  gcn_layers: 4
+  atom_input_features: 92
+  edge_input_features: 80
+  triplet_input_features: 40
+  embedding_features: 64
+  hidden_features: 256
+  output_features: 1
+  link: identity
+  dropout: 0.1
+  regime_hidden_features: 256
+  regime_residual_init: 0.15

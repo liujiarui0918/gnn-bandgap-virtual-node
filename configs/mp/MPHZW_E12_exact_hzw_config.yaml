@@ -1,0 +1,48 @@
+experiment_name: MPHZW_E12_EXACT_HZW_config
+runner: alignn
+seed: 42
+data:
+  dataset_root: data/mp_hzw_matched
+  cache_dir: data/mp_hzw_matched/alignn_cache
+  local_cache_root: /root/lanyun-tmp/gnn_mp_hzw_matched_cache/alignn
+  cache_namespace: MPHZW_E2_ALIGNN_baseline
+  cutoff: 8.0
+  cutoff_extra: 3.0
+  max_neighbors: 12
+  use_lmdb: true
+training:
+  device: auto
+  batch_size: 56
+  test_batch_size: 56
+  epochs: 50
+  optimizer: adamw
+  lr: 0.001
+  weight_decay: 0.00001
+  scheduler: onecycle
+  onecycle_max_lr: 0.001
+  mixed_precision: false
+  pin_memory: true
+  num_workers: 0
+  grad_clip_norm: 5.0
+  lambda_size: 0.15
+  size_loss_threshold: 80.0
+  size_loss_temperature: 18.0
+model:
+  runner_name: ALIGNN_SizeSupervisedVirtualNode
+  variant: sizesupervisedvirtualnode
+  alignn_layers: 4
+  gcn_layers: 4
+  atom_input_features: 92
+  edge_input_features: 80
+  triplet_input_features: 40
+  embedding_features: 64
+  hidden_features: 256
+  output_features: 1
+  link: identity
+  attention_heads: 4
+  dropout: 0.08
+  slot2_residual_init: 0.25
+  fusion_residual_init: 0.2
+  gate_bias_init: -0.5
+  use_size_features_in_gate: false
+  use_size_prior_floor: false

@@ -1,0 +1,22 @@
+\documentclass[11pt,a4paper]{article}
+
+\usepackage[margin=2cm]{geometry}
+\usepackage{newtxtext,newtxmath}
+\usepackage{microtype}
+\usepackage{setspace}
+
+\setlength{\parindent}{2em}
+\setstretch{1.08}
+\pagestyle{empty}
+
+\begin{document}
+
+\begin{center}
+{\Large\bfseries Abstract}
+\end{center}
+
+\vspace{0.4em}
+
+Accurate band-gap prediction is a central task in computational materials science because the band gap determines whether a crystalline material behaves as a metal, semiconductor, or insulator. This project investigates graph neural network models for predicting crystal band gaps directly from atomic structures. The study begins with three representative baselines: Crystal Graph Convolutional Neural Networks (CGCNN), which mainly model local atomic environments; Atomistic Line Graph Neural Networks (ALIGNN), which additionally encode bond-angle information through a line graph; and M3GNet, which represents more general many-body geometric interactions. Since ALIGNN provides a strong and physically meaningful geometric backbone, most enhanced models in this work are built on top of ALIGNN. The core question of the project is whether global structural information can improve crystal band-gap regression beyond local message passing. To answer this question, a series of ALIGNN variants were designed and evaluated. A plain virtual node was first introduced to collect information from all atom nodes and broadcast graph-level context back to local representations. More complex variants were then explored, including global attention, attentive virtual nodes, dual virtual nodes, size-aware routing, top-\(k\) global aggregation, warm-up top-\(k\), and global broadcast decay. A physics-inspired loss was also tested by enforcing consistency between the predicted band gap and the conduction-band-minimum/valence-band-maximum relation when valid auxiliary labels were available. Finally, Huber loss was introduced to improve robustness against noisy labels and large-error outliers. The experiments were conducted on matched Materials Project and HZW band-gap data. A structure-first audit showed that even when two databases describe the same crystal structure, their band-gap labels may still disagree, especially near the metal/non-metal boundary. Therefore, the final analysis separated structural consistency from label-source consistency and evaluated models under both MP-label and HZW-label settings. The results show that the simplest global mechanism, ALIGNN with a single plain virtual node, is more stable than many complex attention-based designs. More importantly, replacing mean-squared error with Huber loss consistently improves robustness across both label sources. In contrast, dual-node and attention-based mechanisms can help in some subsets but are not consistently transferable. Overall, this project demonstrates that a stronger model is not necessarily a more complicated model. For crystal band-gap prediction, a physically meaningful local geometric backbone, a simple global virtual node, careful data auditing, and a robust loss function form a reliable and reproducible pipeline. The work also highlights an important lesson for materials informatics: before drawing conclusions about model architecture, the consistency of crystal structures, labels, and data sources must be carefully verified.
+
+\end{document}

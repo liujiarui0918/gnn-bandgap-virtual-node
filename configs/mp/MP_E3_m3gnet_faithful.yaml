@@ -1,0 +1,32 @@
+experiment_name: MP_E3_M3GNet_baseline
+runner: m3gnet
+seed: 42
+data:
+  dataset_root: data/mp_bandgap_official
+  cache_dir: data/mp_bandgap_official/m3gnet_cache
+  preprocess_shard_size: 2048
+training:
+  device: auto
+  batch_size: 32
+  test_batch_size: 32
+  epochs: 50
+  optimizer: adam
+  lr: 0.001
+  weight_decay: 0.0
+  scheduler: cosine
+  mixed_precision: false
+  pin_memory: true
+  num_workers: 0
+  grad_clip_norm: 5.0
+model:
+  runner_name: M3GNet
+  cutoff: 5.0
+  threebody_cutoff: 4.0
+  dim_node_embedding: 64
+  dim_edge_embedding: 64
+  max_n: 3
+  max_l: 3
+  nblocks: 3
+  units: 128
+  is_intensive: true
+  readout_type: weighted_atom

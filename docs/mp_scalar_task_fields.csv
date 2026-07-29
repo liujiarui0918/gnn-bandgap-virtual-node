@@ -1,0 +1,21 @@
+﻿task_category,mp_endpoint,mp_total_docs,scalar_field,meaning_zh,recommendation
+elasticity,/materials/elasticity/,13283,bulk_modulus.vrh,VRH平均体积模量，表征晶体抗压缩能力,high
+elasticity,/materials/elasticity/,13283,shear_modulus.vrh,VRH平均剪切模量，表征晶体抗剪切形变能力,high
+elasticity,/materials/elasticity/,13283,universal_anisotropy,通用弹性各向异性指数，表征弹性响应方向依赖性,highest
+elasticity,/materials/elasticity/,13283,homogeneous_poisson,均匀泊松比，表征轴向拉伸与横向收缩关系,medium
+elasticity,/materials/elasticity/,13283,debye_temperature,德拜温度，由弹性和声速相关量派生,medium
+dielectric,/materials/dielectric/,7332,e_total,总介电常数，包含电子贡献和离子贡献,high
+dielectric,/materials/dielectric/,7332,e_ionic,离子介电贡献，强依赖极性声子和晶格内部自由度,highest
+dielectric,/materials/dielectric/,7332,e_electronic,电子介电贡献，主要反映电子云极化响应,high
+dielectric,/materials/dielectric/,7332,n,折射率，由电子介电响应相关量派生,medium
+piezoelectric,/materials/piezoelectric/,3322,e_ij_max,最大压电应力张量分量，表征应变诱导极化响应强度,highest
+piezoelectric,/materials/piezoelectric/,3322,total,总压电张量，非scalar字段，可派生张量范数或最大绝对分量,derived_recommended
+piezoelectric,/materials/piezoelectric/,3322,ionic,离子压电贡献张量，非scalar字段，反映离子弛豫对压电响应的贡献,derived_optional
+piezoelectric,/materials/piezoelectric/,3322,electronic,电子压电贡献张量，非scalar字段，反映电子云极化对压电响应的贡献,derived_optional
+phonon,/materials/phonon/,1513,sum_rules_breaking.asr,声学求和规则破坏程度，反映声子力常数一致性误差,low
+phonon,/materials/phonon/,1513,sum_rules_breaking.cnsr,电荷中性求和规则破坏程度，反映Born电荷相关一致性误差,low
+phonon,/materials/phonon/,1513,formula_units,公式单元数，结构描述字段而非目标物性标签,not_target
+phonon,/materials/phonon/,1513,min_phonon_frequency,建议从声子谱派生的最小声子频率，MP endpoint默认字段中不直接给出,derived_recommended
+phonon,/materials/phonon/,1513,has_imaginary_frequency,建议从声子谱派生的动力学稳定性分类标签，MP endpoint默认字段中不直接给出,derived_recommended
+phonon,/materials/phonon/,1513,max_phonon_frequency,建议从声子谱派生的最大声子频率，MP endpoint默认字段中不直接给出,derived_optional
+phonon,/materials/phonon/,1513,phonon_bandwidth,建议从声子谱派生的声子带宽，MP endpoint默认字段中不直接给出,derived_optional

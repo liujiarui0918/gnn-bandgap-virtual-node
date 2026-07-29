@@ -1,0 +1,257 @@
+\documentclass{beamer}
+
+\usepackage{ctex}
+\usepackage{amsmath, amsfonts, amssymb, bm}
+\usepackage{graphicx}
+\usepackage{hyperref}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{ragged2e}
+
+\usetheme{Berlin}
+\usecolortheme{whale}
+\useinnertheme[shadow=true]{rounded}
+\usefonttheme[onlymath]{serif}
+\setbeamercovered{transparent}
+\setbeamertemplate{navigation symbols}{}
+\setbeamertemplate{bibliography item}[text]
+\setbeamercolor{bibliography item}{fg=black}
+\setbeamercolor{bibliography entry author}{fg=black}
+\setbeamercolor{bibliography entry title}{fg=black}
+\setbeamercolor{bibliography entry location}{fg=black}
+\setbeamercolor{bibliography entry note}{fg=black}
+\hypersetup{hidelinks}
+
+\setbeamertemplate{footline}{%
+ \leavevmode%
+ \hbox{%
+ \begin{beamercolorbox}[wd=.31\paperwidth,ht=2.25ex,dp=1ex,center]{author in head/foot}
+ \insertshortauthor
+ \end{beamercolorbox}%
+ \begin{beamercolorbox}[wd=.38\paperwidth,ht=2.25ex,dp=1ex,center]{title in head/foot}
+ \insertshorttitle
+ \end{beamercolorbox}%
+ \begin{beamercolorbox}[wd=.31\paperwidth,ht=2.25ex,dp=1ex,center]{date in head/foot}
+ \insertshortdate \quad \insertframenumber/\inserttotalframenumber
+ \end{beamercolorbox}%
+ }
+}
+
+\title[Band Gap 课堂汇报]{晶体图神经网络 Band Gap 预测课堂汇报}
+\author[刘嘉瑞]{汇报人：刘嘉瑞}
+\institute[HongZhiWei]{数据集：鸿之微 crystal\_band\_100000\\任务：材料 band gap 回归预测}
+\date{2026年4月20日}
+
+\begin{document}
+
+\begin{frame}
+ \titlepage
+\end{frame}
+
+\begin{frame}{目录}
+ \tableofcontents
+\end{frame}
+
+\section{引言与背景}
+
+\begin{frame}{研究背景与任务定义}
+\small
+\begin{itemize}
+  \item \textbf{研究背景：}带隙（band gap）决定材料导电性、光电响应和半导体应用潜力。
+  \item \textbf{核心目标：}在晶体结构已知的前提下，直接回归预测材料带隙。
+  \item \textbf{数据集：}鸿之微 \texttt{crystal\_band\_100000}，清洗后有效样本 \textbf{95,497}。
+  \item \textbf{划分：}训练集 76,397，验证集 9,549，测试集 9,551。
+  \item \textbf{主指标：}MAE；辅以 RMSE、$R^2$、Metal F1。
+  \item \textbf{统一设定：}随机种子 42，所有正式实验固定训练 50 个 epoch，不做提前截断。
+\end{itemize}
+\end{frame}
+
+\begin{frame}{三类基线模型简介}
+\scriptsize
+\centering
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{p{2.0cm} p{3.6cm} p{4.8cm}}
+\toprule
+模型 & 核心思想 & 本项目中的理解 \\
+\midrule
+CGCNN & 以原子为节点、近邻键为边做图卷积 & 结构最简单，主要建模局部原子环境，是经典晶体 GNN 基线。 \\
+ALIGNN & 在原子图之外再引入 line graph，显式建模键角关系 & 比 CGCNN 多了一层角度信息表达，因此通常更适合晶体几何结构任务。 \\
+M3GNet & 在消息传递中进一步融入三体几何信息 & 几何表达更强、泛化能力好，但在本 band gap 任务上未超过 ALIGNN。 \\
+\bottomrule
+\end{tabular}
+
+\vspace{2mm}
+\small
+\begin{itemize}
+  \item 这三者构成了后续增强实验的基线比较对象。
+  \item 后续大部分改进都建立在最强基线 ALIGNN 上。
+\end{itemize}
+\end{frame}
+
+\section{方法}
+
+\begin{frame}{实验设计总览：E1--E12}
+\tiny
+\centering
+\setlength{\tabcolsep}{3pt}
+\begin{tabular}{p{0.75cm} p{4.7cm} p{1.7cm} p{3.0cm}}
+\toprule
+编号 & 核心思路 & 状态 & 说明 \\
+\midrule
+E1 & CGCNN baseline & 完成 & 原子图卷积基线 \\
+E2 & ALIGNN baseline & 完成 & 原子图 + line graph \\
+E3 & M3GNet baseline & 完成 & 三体几何建模 \\
+E4 & ALIGNN + Virtual Node & 完成 & 单个朴素超节点 \\
+E5 & ALIGNN + Transformer & 完成 & 全局注意力 only \\
+E6 & ALIGNN + Physics Constraint & 完成 & band gap / CBM / VBM 多头与物理约束 \\
+E7 & ALIGNN + 1 attentive virtual node & 完成 & 单个注意力超节点 \\
+E8 & ALIGNN + 2 attentive virtual nodes & 完成 & 双超节点 + slot 间轻量交互 \\
+E9 & ALIGNN + size-aware gate & 完成 & 尺度感知地控制第二超节点 \\
+E10 & ALIGNN + active size-aware dual-slot & 进行中 & 更激进地拉高第二超节点参与度 \\
+E11 & Val-routed E4/E8 & 完成 & 在验证集选阈值，测试集硬路由 \\
+E12 & Size-supervised gate & 未启动 & 尺度只进 loss，不进前向 \\
+\bottomrule
+\end{tabular}
+\end{frame}
+
+\section{结果与讨论}
+
+\begin{frame}{E1--E6 正式结果总表}
+\scriptsize
+\centering
+\resizebox{\textwidth}{!}{
+\begin{tabular}{lcccccc}
+\toprule
+实验 & 模型 & MAE$\downarrow$ & RMSE$\downarrow$ & $R^2\uparrow$ & Metal F1$\uparrow$ & Best Epoch \\
+\midrule
+E1 & CGCNN & 0.302169 & 0.530287 & 0.884731 & 0.806929 & 48 \\
+E2 & ALIGNN & 0.231432 & 0.471325 & 0.908939 & 0.862117 & 50 \\
+E3 & M3GNet & 0.268041 & 0.553444 & 0.874444 & 0.871087 & 42 \\
+E4 & ALIGNN + Virtual Node & \textbf{0.220077} & 0.474616 & 0.907663 & 0.883811 & 48 \\
+E5 & ALIGNN + Transformer & 0.237450 & 0.491768 & 0.900869 & 0.876873 & 46 \\
+E6 & ALIGNN + Physics Constraint & 0.221208 & \textbf{0.453924} & \textbf{0.915539} & 0.864048 & 50 \\
+\bottomrule
+\end{tabular}
+}
+\end{frame}
+
+\begin{frame}{E1--E6 的主要结论}
+\small
+\begin{itemize}
+  \item \textbf{基线强弱：}E2 ALIGNN 明显优于 E1 CGCNN 和 E3 M3GNet，是本任务最强基线。
+  \item \textbf{最优单模型 MAE：}E4 = 0.220077，说明简单超节点在本任务上非常有效。
+  \item \textbf{最优 RMSE 与 $R^2$：}E6 最好，说明物理约束能改善整体误差分布与稳定性。
+  \item \textbf{E5 负优化：}当前这版 Transformer 没有打过 E4，甚至没有稳定超过 E2。
+  \item \textbf{一句话概括：}在 band gap 任务上，\textbf{“超节点”和“物理约束”有效，直接堆全局注意力并不天然有效。}
+\end{itemize}
+\end{frame}
+
+\begin{frame}{E7--E11：全局信息建模继续推进}
+\scriptsize
+\centering
+\resizebox{\textwidth}{!}{
+\begin{tabular}{l p{3.8cm} c c c c}
+\toprule
+实验 & 核心思路 & MAE$\downarrow$ & RMSE$\downarrow$ & $R^2\uparrow$ & Metal F1$\uparrow$ \\
+\midrule
+E7 & 1 个 attentive virtual node & 0.325835 & 0.646059 & 0.828906 & 0.840996 \\
+E8 & 2 个 attentive virtual nodes & 0.228456 & 0.494547 & 0.899745 & 0.884408 \\
+E9 & size-aware gate 控制第二超节点 & 0.221006 & 0.477198 & 0.906656 & \textbf{0.887417} \\
+E11 & 验证集选阈值的 E4/E8 硬路由 & \textbf{0.219840} & 0.474116 & 0.907858 & 0.883299 \\
+\bottomrule
+\end{tabular}
+}
+
+\vspace{2mm}
+\small
+\begin{itemize}
+  \item E7 明显失败，说明“attention”本身不是加分保证。
+  \item E8 恢复到合理水平，并且在大结构桶上开始超过 E4。
+  \item E9 的 MAE 接近 E4，但 \texttt{slot2\_enable\_mean = 0.0075}，第二超节点几乎塌缩。
+  \item E11 目前是\textbf{整体 MAE 最优}，但它是路由式组合方案，不是单一端到端 backbone。
+\end{itemize}
+\end{frame}
+
+\begin{frame}{结构尺度效应：为什么 E8 和 E11 值得做}
+\small
+\begin{itemize}
+  \item 在测试集按 \texttt{num\_atoms} 分桶后，E4 在小中型结构（$\le 80$ 原子）最稳。
+  \item 但在大结构上，E8 开始反超 E4：
+  \begin{itemize}
+    \item \texttt{81--160} 原子：E8 = 0.3736，E4 = 0.3796
+    \item \texttt{>160} 原子：E8 = 0.2696，E4 = 0.2930
+  \end{itemize}
+  \item 因此 E11 的思路是：
+  \begin{itemize}
+    \item 小结构走 E4
+    \item 大结构走 E8
+    \item 阈值不拍脑袋写死，而是在验证集上搜索得到 \textbf{117}。
+  \end{itemize}
+  \item 这说明：\textbf{简单超节点适合主流样本，双超节点更像大结构增强器。}
+\end{itemize}
+\end{frame}
+
+\begin{frame}{E10--E12 最新状态}
+\small
+\begin{itemize}
+  \item \textbf{E10：}在 E9 基础上更积极地打开第二超节点，提高残差与下限参与度。
+  \item \textbf{最新进度：}截至 \textbf{2026-04-20 21:53 CST}，E10 已训练到 \textbf{33/50} epoch。
+  \item \textbf{E10 当前验证集表现：}epoch 33 时 val MAE = \textbf{0.2471}，暂时还没有超过 E4 / E11。
+  \item \textbf{E11：}已经完整完成，测试集 MAE = \textbf{0.219840}，是目前整体最优结果。
+  \item \textbf{E12：}设计已完成，但尚未正式启动完整训练。
+  \item \textbf{E12 的关键约束：}结构尺度信息不进入前向图编码，只作为 loss 监督第二超节点 gate 的开启趋势。
+\end{itemize}
+\end{frame}
+
+\begin{frame}{综合讨论}
+\small
+\begin{itemize}
+  \item \textbf{目前最好讲的主线：}ALIGNN 是最强基线，E4 和 E6 证明“全局超节点”和“物理约束”都有效。
+  \item \textbf{全局注意力主线的经验：}
+  \begin{itemize}
+    \item 全局注意力 only（E5）不如超节点
+    \item 1 个 attentive 超节点（E7）失败
+    \item 2 个 attentive 超节点（E8）才在大结构上体现价值
+  \end{itemize}
+  \item \textbf{当前最强结果：}E11 略优于 E4，但提升幅度很小，本质是“结构尺度路由”而不是 backbone 根本升级。
+  \item \textbf{当前最强单模型：}如果只看单个模型骨干，E4 依然是最稳、最好讲的主结果。
+\end{itemize}
+\end{frame}
+
+\section{结论}
+
+\begin{frame}{结论}
+\small
+\begin{itemize}
+  \item 本项目在鸿之微数据集上系统完成了 E1--E12 的一轮 band gap 预测探索。
+  \item 三个基线中，\textbf{ALIGNN} 最强；CGCNN 最轻量；M3GNet 在本任务上未超过 ALIGNN。
+  \item 已完成实验里：
+  \begin{itemize}
+    \item \textbf{E4} 给出最强单模型 MAE：0.220077
+    \item \textbf{E6} 给出最优 RMSE / $R^2$
+    \item \textbf{E11} 给出当前整体最优 MAE：0.219840
+  \end{itemize}
+  \item 还在推进中的问题是：如何让第二超节点在不伤害小结构的前提下真正发挥作用。
+  \item 下一步最值得关注的是 E10 收尾结果，以及 E12 这条“size 只进 loss”的干净消融路线。
+\end{itemize}
+\end{frame}
+
+\section{参考文献}
+
+\begin{frame}{参考文献}
+\footnotesize
+\color{black}
+\raggedright
+\noindent [1] Tian Xie and Jeffrey C. Grossman. Crystal Graph Convolutional Neural Networks for an Accurate and Interpretable Prediction of Material Properties. \emph{Physical Review Letters}, 120(14):145301, 2018.
+
+\vspace{0.6em}
+\noindent [2] Kamal Choudhary and Brian DeCost. Atomistic Line Graph Neural Network for Improved Materials Property Predictions. \emph{npj Computational Materials}, 7:185, 2021.
+
+\vspace{0.6em}
+\noindent [3] Chi Chen and Shyue Ping Ong. A Universal Graph Deep Learning Interatomic Potential for the Periodic Table. \emph{Nature Computational Science}, 2:718--728, 2022.
+
+\vspace{0.6em}
+\noindent [4] Project configs, training logs, and experiment summaries in the local workspace: \texttt{configs/*}, \texttt{docs/*}, \texttt{results/*}, 2026.
+\end{frame}
+
+\end{document}

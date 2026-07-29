@@ -1,0 +1,215 @@
+\documentclass{beamer}
+
+\usepackage{ctex}
+\usepackage{amsmath, amsfonts, amssymb, bm}
+\usepackage{graphicx}
+\usepackage{hyperref}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{ragged2e}
+
+\usetheme{Berlin}
+\usecolortheme{whale}
+\useinnertheme[shadow=true]{rounded}
+\usefonttheme[onlymath]{serif}
+\setbeamercovered{transparent}
+\setbeamertemplate{navigation symbols}{}
+
+\setbeamertemplate{footline}{%
+ \leavevmode%
+ \hbox{%
+ \begin{beamercolorbox}[wd=.31\paperwidth,ht=2.25ex,dp=1ex,center]{author in head/foot}
+ \insertshortauthor
+ \end{beamercolorbox}%
+ \begin{beamercolorbox}[wd=.38\paperwidth,ht=2.25ex,dp=1ex,center]{title in head/foot}
+ \insertshorttitle
+ \end{beamercolorbox}%
+ \begin{beamercolorbox}[wd=.31\paperwidth,ht=2.25ex,dp=1ex,center]{date in head/foot}
+ \insertshortdate \quad \insertframenumber/\inserttotalframenumber
+ \end{beamercolorbox}%
+ }
+}
+
+\title[Matbench GNN 最终汇报]{晶体带隙预测实验最终汇报}
+\author[刘嘉瑞]{汇报人：刘嘉瑞}
+\institute[Band Gap]{项目：基于晶体图神经网络的 band gap 预测}
+\date{2026年4月17日}
+
+\begin{document}
+
+\begin{frame}
+ \titlepage
+\end{frame}
+
+\begin{frame}{项目目标}
+\begin{itemize}
+  \item 在鸿之微 \texttt{crystal\_band\_100000} 数据集上完成 6 组晶体 GNN 实验。
+  \item 统一训练设定：单卡 RTX 3090、随机种子 42、所有实验强制训练 50 个 epoch。
+  \item 任务定义：材料晶体 \textbf{band gap 回归预测}。
+  \item 评价指标：MAE 为主，辅以 RMSE、$R^2$、Metal F1、训练时长和峰值显存。
+\end{itemize}
+\end{frame}
+
+\begin{frame}{数据集与任务}
+\small
+\begin{itemize}
+  \item 数据来源：鸿之微 \texttt{crystal\_band\_100000.jsonl}
+  \item 清洗后有效样本：\textbf{95,497}
+  \item 数据划分：
+  \begin{itemize}
+    \item 训练集：76,397
+    \item 验证集：9,549
+    \item 测试集：9,551
+  \end{itemize}
+  \item 主目标：\textbf{band\_gap}（eV）回归
+  \item 可用辅助标签：\texttt{cbm}, \texttt{vbm}, \texttt{gap\_type}, \texttt{formula}, \texttt{density}
+  \item E6 中进一步利用 CBM/VBM 构造辅助监督和物理一致性约束。
+\end{itemize}
+\end{frame}
+
+\begin{frame}{实验设计}
+\scriptsize
+\centering
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{p{0.8cm} p{2.8cm} p{4.9cm} p{1.2cm}}
+\toprule
+编号 & 模型 & 核心改动 & 状态 \\
+\midrule
+E1 & CGCNN Baseline & 原子图卷积基线 & 完成 \\
+E2 & ALIGNN Baseline & 原子图 + line graph，建模键角信息 & 完成 \\
+E3 & M3GNet Baseline & 三体几何建模 & 完成 \\
+E4 & ALIGNN + Virtual Node & 在 ALIGNN 上加入全局虚拟节点聚合与广播 & 完成 \\
+E5 & ALIGNN + Transformer & 在 ALIGNN 表征后叠加 2 层 4 头 Transformer & 完成 \\
+E6 & ALIGNN + Physics Constraint & 在 ALIGNN 上加入多头输出与物理一致性损失 & 完成 \\
+\bottomrule
+\end{tabular}
+
+\vspace{2mm}
+\footnotesize
+说明：E4、E5、E6 是三个\textbf{分别独立}建立在 ALIGNN 基线上的增强实验，不是逐层叠加。
+\end{frame}
+
+\begin{frame}{最终结果总表}
+\scriptsize
+\centering
+\resizebox{\textwidth}{!}{
+\begin{tabular}{lcccccc}
+\toprule
+实验 & 模型 & MAE$\downarrow$ & RMSE$\downarrow$ & $R^2\uparrow$ & Metal F1$\uparrow$ & Best Epoch \\
+\midrule
+E1 & CGCNN & 0.302169 & 0.530287 & 0.884731 & 0.806929 & 48 \\
+E2 & ALIGNN & 0.231432 & 0.471325 & 0.908939 & 0.862117 & 50 \\
+E3 & M3GNet & 0.268041 & 0.553444 & 0.874444 & 0.871087 & 42 \\
+E4 & ALIGNN + Virtual Node & \textbf{0.220077} & 0.474616 & 0.907663 & \textbf{0.883811} & 48 \\
+E5 & ALIGNN + Transformer & 0.237450 & 0.491768 & 0.900869 & 0.876873 & 46 \\
+E6 & ALIGNN + Physics Constraint & 0.221208 & \textbf{0.453924} & \textbf{0.915539} & 0.864048 & 50 \\
+\bottomrule
+\end{tabular}
+}
+\end{frame}
+
+\begin{frame}{结果解读}
+\small
+\begin{itemize}
+  \item \textbf{基线对比：}ALIGNN 明显优于 CGCNN 和 M3GNet，是当前最强基线。
+  \item \textbf{按 MAE 排序：}E4 $>$ E6 $>$ E2 $>$ E5 $>$ E3 $>$ E1。
+  \item \textbf{按 RMSE / $R^2$ 排序：}E6 最好，说明物理约束版整体误差分布更稳。
+  \item \textbf{按 Metal F1 排序：}E4 最好，说明 Virtual Node 对金属/非金属判别更有帮助。
+  \item \textbf{E5 现象：}Transformer 版没有超过 E4，也没有超过 E2，说明当前这版全局注意力设计尚未带来稳定收益。
+\end{itemize}
+\end{frame}
+
+\begin{frame}{增强实验与 ALIGNN 基线对比}
+\small
+\begin{itemize}
+  \item \textbf{E4 vs E2：}
+  \begin{itemize}
+    \item MAE 从 0.2314 降到 0.2201
+    \item Metal F1 从 0.8621 提升到 0.8838
+    \item 说明全局虚拟节点机制有效
+  \end{itemize}
+  \item \textbf{E5 vs E2：}
+  \begin{itemize}
+    \item MAE 从 0.2314 上升到 0.2375
+    \item RMSE 也变差
+    \item 说明当前 Transformer 版暂时没有带来收益
+  \end{itemize}
+  \item \textbf{E6 vs E2：}
+  \begin{itemize}
+    \item MAE 从 0.2314 降到 0.2212
+    \item RMSE 从 0.4713 降到 0.4539
+    \item $R^2$ 从 0.9089 提升到 0.9155
+    \item 说明物理约束能明显提升整体回归稳定性
+  \end{itemize}
+\end{itemize}
+\end{frame}
+
+\begin{frame}{训练开销对比}
+\scriptsize
+\centering
+\resizebox{\textwidth}{!}{
+\begin{tabular}{lcccc}
+\toprule
+实验 & 训练轮数 & 训练时长（h） & 峰值显存（GB） & 备注 \\
+\midrule
+E1 CGCNN & 50 & 2.08 & 0.792 & 最轻量 \\
+E2 ALIGNN & 50 & 5.74 & 12.329 & 最强基线 \\
+E3 M3GNet & 50 & 3.16 & 3.147 & 三体建模 \\
+E4 ALIGNN + VN & 50 & 6.18 & 12.210 & 最优 MAE / F1 \\
+E5 ALIGNN + Transformer & 50 & 6.83 & 9.691 & 收益不明显 \\
+E6 ALIGNN + Physics & 50 & 5.81 & 12.548 & 最优 RMSE / $R^2$ \\
+\bottomrule
+\end{tabular}
+}
+
+\vspace{2mm}
+\small
+\begin{itemize}
+  \item 六组实验都完整跑满 50 个 epoch。
+  \item ALIGNN 系列总体耗时更高，但精度明显优于 CGCNN。
+  \item 数据缓存迁移到数据盘后，后续实验运行稳定，没有再次出现磁盘写满中断。
+\end{itemize}
+\end{frame}
+
+\begin{frame}{E6 物理约束的含义}
+\small
+\[
+L = L_{\text{bandgap}} + 0.3L_{\text{aux}} + 0.5L_{\text{phys}} + 0.1L_{\text{nonneg}}
+\]
+\begin{itemize}
+  \item $L_{\text{bandgap}}$：主任务损失，让预测 band gap 尽量接近真实值。
+  \item $L_{\text{aux}}$：辅助任务损失，让模型同时预测 CBM 和 VBM。
+  \item $L_{\text{phys}}$：物理一致性损失，约束 \texttt{band gap = CBM - VBM}。
+  \item $L_{\text{nonneg}}$：非负惩罚，避免预测出负带隙。
+  \item 有效性 mask 规则：
+  \[
+  |cbm| > \varepsilon \;\; \text{or} \;\; |vbm| > \varepsilon
+  \]
+  仅在 CBM/VBM 明确有效的样本上计算辅助损失和物理约束，避免零占位样本污染训练。
+\end{itemize}
+\end{frame}
+
+\begin{frame}{最终结论}
+\begin{itemize}
+  \item \textbf{最强基线：}ALIGNN
+  \item \textbf{最优 MAE / Metal F1：}E4（ALIGNN + Virtual Node）
+  \item \textbf{最优 RMSE / $R^2$：}E6（ALIGNN + Physics Constraint）
+  \item \textbf{无效增强：}E5（ALIGNN + Transformer）在当前实现下没有优于 ALIGNN 基线
+  \item 因此，本轮实验最重要的结论是：
+  \begin{itemize}
+    \item 全局虚拟节点增强是有效的
+    \item 物理约束增强也是有效的
+    \item Transformer 全局建模方案仍需继续调整
+  \end{itemize}
+\end{itemize}
+\end{frame}
+
+\begin{frame}{下一步工作}
+\begin{itemize}
+  \item 对 E5 做针对性调优，重点排查位置编码、全局 token 组织方式和注意力层深度。
+  \item 进一步分析 E4 和 E6 的误差分布，找出它们各自提升最明显的材料类型。
+  \item 若后续继续发论文或做答辩展示，可以以 E4 和 E6 作为两个主增强方向展开。
+\end{itemize}
+\end{frame}
+
+\end{document}

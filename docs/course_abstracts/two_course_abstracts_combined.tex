@@ -1,0 +1,50 @@
+\documentclass[11pt,a4paper]{article}
+
+\usepackage[margin=1.9cm]{geometry}
+\usepackage{newtxtext,newtxmath}
+\usepackage{microtype}
+\usepackage[hidelinks]{hyperref}
+\usepackage{parskip}
+
+\setlength{\parindent}{0pt}
+\pagestyle{empty}
+
+\begin{document}
+
+\begin{center}
+{\Large\bfseries Course I Abstract}\\[0.35em]
+{\bfseries Robust Graph Neural Networks for Crystal Band-Gap Prediction}\\[0.25em]
+Liu Jiarui
+\end{center}
+
+\textbf{Abstract.}
+Accurate band-gap prediction is a central task in computational materials science because the band gap determines whether a crystalline material behaves as a metal, semiconductor, or insulator. This project studies graph neural network models for predicting crystal band gaps directly from atomic structures. The work starts from three representative baselines: Crystal Graph Convolutional Neural Networks (CGCNN), which model local atomic neighborhoods; Atomistic Line Graph Neural Networks (ALIGNN), which additionally encode bond-angle information through a line graph; and M3GNet, which represents more general many-body geometric interactions. Based on these baselines, a series of enhanced ALIGNN variants were developed to examine whether global structural information can improve band-gap regression.
+
+The main methodological idea is to introduce global information pathways into crystal graph learning. A simple virtual node was first added to aggregate information from all atoms and broadcast graph-level context back to local atomic representations. More complex variants, including global attention, attentive virtual nodes, dual virtual nodes, size-aware routing, top-\(k\) global aggregation, warm-up schedules, and global broadcast decay, were then evaluated through controlled ablation studies. In parallel, a physics-inspired loss was explored by enforcing consistency between the predicted band gap and the conduction-band-minimum/valence-band-maximum relation when valid labels were available. The final stage focused on robust learning with Huber loss, motivated by the observation that different data sources may contain label conflicts and heavy-tailed errors.
+
+The experimental analysis used matched Materials Project and HZW band-gap data. A structure-first audit showed that crystal structures can often be matched across sources, while their band-gap labels may still disagree, especially around metal/non-metal boundaries. Therefore, the final comparison separated structural consistency from label-source consistency. Across the relaxed clean equal-atoms setting, the most stable conclusion was that ALIGNN with a single plain virtual node and Huber loss provided the most reliable improvement. More complex global mechanisms sometimes improved specific data splits, but their gains were not consistently transferable between MP and HZW labels.
+
+This study demonstrates that model complexity alone does not guarantee better materials-property prediction. For band-gap regression, a physically meaningful local geometric backbone, a simple global token, and a robust loss function form a stronger and more reproducible design than heavily parameterized attention mechanisms. The project also highlights the importance of data auditing in materials informatics: before claiming architectural superiority, one must verify whether compared datasets share the same structures, labels, and physical interpretation.
+
+\textbf{Keywords:} materials informatics; crystal graph neural networks; band gap; ALIGNN; virtual node; Huber loss; data consistency.
+
+\newpage
+
+\begin{center}
+{\Large\bfseries Course II Abstract}\\[0.35em]
+{\bfseries Ablation-Driven Design of Global Tokens and Robust Losses in Crystal GNNs}\\[0.25em]
+Liu Jiarui
+\end{center}
+
+\textbf{Abstract.}
+Graph neural networks provide an effective framework for learning from crystal structures because atoms, bonds, periodic neighborhoods, and bond angles can be represented naturally as graph-based features. However, standard message passing is primarily local: long-range information must be transmitted through multiple layers, which may cause oversmoothing, optimization difficulty, or weak global representation. This project investigates whether global-token mechanisms can improve crystal band-gap prediction, and whether such improvements remain stable under different data-label sources.
+
+The model-development process followed an ablation-driven workflow. CGCNN, ALIGNN, and M3GNet were first used as baselines. ALIGNN was selected as the main backbone because its atom graph and line graph explicitly encode local geometric relations. A plain virtual node was then introduced as a low-cost global token: it pools atom representations into a graph-level state and sends this global context back to all atoms. Several stronger-looking variants were further tested, including Transformer-style global attention, single and dual attentive virtual nodes, hard size-based routing, size-supervised adaptive dual slots, top-\(k\) node selection, top-\(k\) warm-up, and decayed global broadcasting. These designs were compared under the same regression target and evaluated with MAE, RMSE, \(R^2\), metal/non-metal classification behavior, learning curves, and residual distributions.
+
+The key empirical finding is that the simplest global-token design was more stable than many complex alternatives. On early HZW experiments, dual-slot and physics-constrained variants appeared promising, especially for larger structures. After moving to matched MP--HZW data and auditing structural and label consistency, these complex mechanisms became less reliable. In contrast, the single plain virtual node remained a strong modification to ALIGNN. Replacing mean-squared error with Huber loss further improved robustness by treating small errors quadratically while reducing the influence of extreme label conflicts or outliers. This change yielded consistent gains across both MP-label and HZW-label training.
+
+From a machine-learning perspective, the project suggests three lessons. First, inductive bias matters: a simple virtual node complements local geometric message passing without overwhelming it. Second, ablation is necessary: attention, dual slots, and routing mechanisms may increase capacity but can also learn dataset-specific noise. Third, robust objectives can be as important as model architecture when the training labels contain disagreement or heavy-tailed errors. The final recommendation is therefore not the most complex model, but a reproducible pipeline built on ALIGNN, a single global virtual node, rigorous data auditing, and Huber loss.
+
+\textbf{Keywords:} graph neural networks; ablation study; virtual token; attention; robust regression; Huber loss; crystal property prediction.
+
+\end{document}

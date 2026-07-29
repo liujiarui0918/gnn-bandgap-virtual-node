@@ -1,0 +1,32 @@
+experiment_name: E1_CGCNN_baseline
+runner: cgcnn
+seed: 42
+data:
+  dataset_root: data/official_dataset
+training:
+  device: auto
+  batch_size: 256
+  test_batch_size: 256
+  epochs: 50
+  optimizer: adam
+  lr: 0.001
+  weight_decay: 0.0
+  scheduler: plateau
+  scheduler_patience: 5
+  scheduler_factor: 0.5
+  mixed_precision: false
+  pin_memory: true
+  num_workers: 0
+  grad_clip_norm: 5.0
+model:
+  runner_name: CGCNN
+  random_seed: 42
+  max_num_nbr: 12
+  radius: 8.0
+  dmin: 0.0
+  step: 0.2
+  atom_fea_len: 64
+  n_conv: 3
+  h_fea_len: 128
+  n_h: 1
+

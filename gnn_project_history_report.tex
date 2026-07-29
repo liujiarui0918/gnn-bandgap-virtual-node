@@ -1,0 +1,397 @@
+\documentclass[aspectratio=169]{beamer}
+
+\usepackage{ctex}
+\usepackage{amsmath, amsfonts, amssymb, bm}
+\usepackage{graphicx}
+\usepackage{hyperref}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{tabularx}
+\usepackage{ragged2e}
+
+\usetheme{Berlin}
+\usecolortheme{whale}
+\useinnertheme[shadow=true]{rounded}
+\usefonttheme[onlymath]{serif}
+\setbeamercovered{transparent}
+\setbeamertemplate{navigation symbols}{}
+\setbeamertemplate{bibliography item}[text]
+\setbeamercolor{bibliography item}{fg=black}
+\setbeamercolor{bibliography entry author}{fg=black}
+\setbeamercolor{bibliography entry title}{fg=black}
+\setbeamercolor{bibliography entry location}{fg=black}
+\setbeamercolor{bibliography entry note}{fg=black}
+\hypersetup{hidelinks}
+
+\newcolumntype{Y}{>{\RaggedRight\arraybackslash}X}
+\newcommand{\good}[1]{\textcolor{green!45!black}{#1}}
+\newcommand{\warn}[1]{\textcolor{orange!80!black}{#1}}
+\newcommand{\bad}[1]{\textcolor{red!70!black}{#1}}
+
+\setbeamertemplate{footline}{%
+ \leavevmode%
+ \hbox{%
+ \begin{beamercolorbox}[wd=.31\paperwidth,ht=2.25ex,dp=1ex,center]{author in head/foot}
+ \insertshortauthor
+ \end{beamercolorbox}%
+ \begin{beamercolorbox}[wd=.38\paperwidth,ht=2.25ex,dp=1ex,center]{title in head/foot}
+ \insertshorttitle
+ \end{beamercolorbox}%
+ \begin{beamercolorbox}[wd=.31\paperwidth,ht=2.25ex,dp=1ex,center]{date in head/foot}
+ \insertshortdate \quad \insertframenumber/\inserttotalframenumber
+ \end{beamercolorbox}%
+ }
+}
+
+\title[晶体带隙预测阶段性汇报]{晶体带隙预测项目阶段性汇报}
+\subtitle{从模型增强到数据质量诊断：HZW 与 Materials Project 复现分析}
+\author[刘嘉瑞]{汇报人：刘嘉瑞}
+\institute[GNN Band Gap]{任务：晶体 band gap 回归预测\\模型：CGCNN / ALIGNN / M3GNet / Virtual Node / Attentive Dual Slot}
+\date{2026年5月}
+
+\begin{document}
+
+\begin{frame}
+ \titlepage
+\end{frame}
+
+\begin{frame}{目录}
+ \tableofcontents
+\end{frame}
+
+\section{背景与主线}
+
+\begin{frame}{汇报主线}
+\small
+\begin{block}{研究问题}
+局部晶体 GNN 是否缺少全局信息？在 ALIGNN 上加入 virtual node、attention slot 和物理约束，能否改善 band gap 预测？
+\end{block}
+
+\begin{block}{实验路径}
+先在鸿之微 HZW 数据集上验证 E1--E13，再迁移到 Materials Project full 和 MP-HZW matched 数据。
+\end{block}
+
+\begin{alertblock}{当前核心结论}
+模型排序不能脱离标签源讨论；MP summary band gap 与 HZW band gap 的冲突足以改变模型结论。
+\end{alertblock}
+\end{frame}
+
+\begin{frame}{任务背景：晶体 band gap 预测}
+\small
+\begin{itemize}
+  \item 输入：晶体结构，包括原子种类、坐标、晶格和邻接关系。
+  \item 输出：材料带隙 \texttt{band\_gap}，单位 eV。
+  \item 经典晶体 GNN 主要依赖局部消息传递：邻居原子、键长、键角和局部配位环境。
+  \item 本项目假设：band gap 虽强依赖局部化学，但晶胞尺度、长程结构和全局汇聚也可能影响预测。
+  \item 因此主线是：忠实复现基线后，逐步加入超节点、注意力槽位和物理一致性约束。
+\end{itemize}
+\end{frame}
+
+\begin{frame}{三个基线模型}
+\scriptsize
+\centering
+\setlength{\tabcolsep}{4pt}
+\begin{tabularx}{\textwidth}{p{2.1cm} Y Y}
+\toprule
+模型 & 核心思想 & 本项目中的作用 \\
+\midrule
+CGCNN & 将晶体表示为原子图，边特征主要来自邻居距离。 & 最基础晶体图卷积 baseline，简单但几何表达较弱。 \\
+ALIGNN & 在原子图之外引入 line graph，显式建模键角和二阶几何关系。 & 本项目最强、最稳定的 baseline，也是后续增强模型主干。 \\
+M3GNet & 强调三体几何和通用材料图表示。 & 材料建模能力强，但在当前 band gap 任务中没有超过 ALIGNN。 \\
+\bottomrule
+\end{tabularx}
+\end{frame}
+
+\begin{frame}{数据与阶段路线}
+\scriptsize
+\centering
+\setlength{\tabcolsep}{4pt}
+\begin{tabularx}{\textwidth}{p{2.0cm} p{2.5cm} Y Y}
+\toprule
+阶段 & 数据范围 & 目的 & 关键发现 \\
+\midrule
+HZW & 95,497 条，固定 train/val/test。 & 验证模型增强是否有效。 & E4 稳定提升，E12/E13 进一步超过 E4。 \\
+MP full & 154,875 条 MP bandgap。 & 检验公开数据泛化。 & E4 重新最稳，E7/E8/E12 未超过 E4。 \\
+MP-HZW matched & 92,826 条匹配样本。 & 一比一对齐 HZW 来源。 & 发现 MP summary 与 HZW band gap 标签冲突。 \\
+Clean matched & 84,830 条类别一致样本。 & 排除金属/非金属冲突后重训。 & E4 仍最稳，E12/E1 待最终同步。 \\
+\bottomrule
+\end{tabularx}
+\end{frame}
+
+\section{方法}
+
+\begin{frame}{实验矩阵：E1--E13}
+\tiny
+\centering
+\setlength{\tabcolsep}{3pt}
+\begin{tabularx}{\textwidth}{p{0.7cm} p{3.1cm} Y p{2.5cm}}
+\toprule
+编号 & 模型/方案 & 核心作用 & 当前判断 \\
+\midrule
+E1 & CGCNN & 基础晶体图卷积 baseline。 & 弱于 ALIGNN \\
+E2 & ALIGNN & 原子图 + line graph / 键角信息。 & 最强 baseline \\
+E3 & M3GNet & 三体几何和通用材料图。 & 本任务未超过 ALIGNN \\
+E4 & ALIGNN + 朴素超节点 & 全局汇聚。 & 最稳定增强 \\
+E5 & ALIGNN + Transformer & 全局注意力 only。 & 整体负优化/弱收益 \\
+E6 & ALIGNN + 物理约束 & CBM/VBM 辅助监督。 & HZW 有收益 \\
+E7 & 1 个 attentive 超节点 & 单槽位注意力超节点。 & 不稳定，HZW 负优化 \\
+E8 & 2 个 attentive 超节点 & 双槽位 + slot attention。 & HZW 大结构有收益 \\
+E10/E11 & E4/E8 路由融合 & 阈值或验证集路由。 & 阈值泛化不稳 \\
+E12 & size-supervised dual slot & size 只进 loss 监督 slot2。 & HZW 强，MP 弱 \\
+E13 & E12 + physics & 双槽位 + 物理约束。 & HZW 当前最好 \\
+\bottomrule
+\end{tabularx}
+\end{frame}
+
+\begin{frame}{E12 / E13 的设计逻辑}
+\small
+\begin{columns}[T,onlytextwidth]
+\begin{column}{0.32\textwidth}
+\begin{block}{结构}
+以 ALIGNN 为骨架，保留 E4 的主超节点，再加入第二个 attentive global slot。
+\end{block}
+\end{column}
+\begin{column}{0.33\textwidth}
+\begin{block}{E12 损失}
+\scriptsize
+size 不进入前向 gate；训练时用 \texttt{num\_atoms} 构造软标签监督 slot2：
+\[
+\resizebox{0.95\linewidth}{!}{$
+L = L_{\text{gap}} + \lambda \cdot \mathrm{BCE}\bigl(g,\sigma((N-80)/18)\bigr)
+$}
+\]
+\end{block}
+\end{column}
+\begin{column}{0.32\textwidth}
+\begin{block}{E13 物理约束}
+在 E12 基础上加入 CBM/VBM 辅助监督和
+\[
+\text{gap} = \text{CBM} - \text{VBM}
+\]
+一致性约束，并用 mask 排除无效 CBM/VBM。
+\end{block}
+\end{column}
+\end{columns}
+\end{frame}
+
+\section{HZW 结果}
+
+\begin{frame}{HZW 阶段：模型增强确实有效}
+\scriptsize
+\centering
+\resizebox{\textwidth}{!}{
+\begin{tabular}{l l c c c l}
+\toprule
+实验 & 模型 & MAE$\downarrow$ & RMSE$\downarrow$ & $R^2\uparrow$ & 结论 \\
+\midrule
+E1 & CGCNN & 0.3022 & 0.5303 & 0.8847 & 基础 baseline \\
+E2 & ALIGNN & 0.2314 & 0.4713 & 0.9089 & 最强 baseline \\
+E4 & ALIGNN + VN & 0.2201 & 0.4746 & 0.9077 & 朴素超节点最稳 \\
+E6 & ALIGNN + physics & 0.2212 & \textbf{0.4539} & \textbf{0.9155} & RMSE / $R^2$ 更好 \\
+E8 & 2-slot attentive VN & 0.2285 & 0.4945 & 0.8997 & 整体一般，大结构有价值 \\
+E12 & size-supervised dual slot & 0.2179 & 0.4712 & 0.9090 & 超过 E4 \\
+E13 & E12 + physics & \textbf{0.2119} & 0.4616 & 0.9126 & HZW 当前最优 \\
+\bottomrule
+\end{tabular}
+}
+
+\vspace{1mm}
+\small
+HZW 上的核心事实：E4 证明“全局汇聚”有效；E12/E13 证明“带监督的第二全局槽位 + 物理约束”还能继续提升。
+\end{frame}
+
+\begin{frame}{HZW 分桶：为什么会想到双超节点}
+\scriptsize
+\centering
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{l c c c c l}
+\toprule
+原子数桶 & 样本数 & E4 & E7 & E8 & 观察 \\
+\midrule
+$\le 10$ & 2661 & \textbf{0.1248} & 0.2226 & 0.1272 & E4 最稳 \\
+11--20 & 2232 & \textbf{0.2022} & 0.2912 & 0.2060 & E4 最稳 \\
+21--40 & 2534 & \textbf{0.2424} & 0.3552 & 0.2548 & E4 最稳 \\
+41--80 & 1642 & \textbf{0.3193} & 0.4419 & 0.3422 & E4 最稳 \\
+81--160 & 447 & 0.3796 & 0.5190 & \textbf{0.3736} & E8 开始反超 \\
+$>160$ & 35 & 0.2930 & 0.3462 & \textbf{0.2696} & E8 最好 \\
+\bottomrule
+\end{tabular}
+
+\vspace{2mm}
+\small
+当时的合理推断：小中结构一个朴素超节点足够，大结构可能需要两个全局槽位承载不同信息。
+\end{frame}
+
+\section{MP 复现}
+
+\begin{frame}{MP full 复现：规律开始失效}
+\scriptsize
+\centering
+\begin{tabular}{l l c c c c}
+\toprule
+实验 & 模型 & MAE$\downarrow$ & RMSE$\downarrow$ & $R^2\uparrow$ & Best Epoch \\
+\midrule
+E2 & ALIGNN & 0.2397 & -- & -- & -- \\
+E4 & ALIGNN + VN & \textbf{0.2302} & \textbf{0.5122} & \textbf{0.8854} & 50 \\
+E7 & 1 attentive VN & 0.2390 & 0.5273 & 0.8785 & 48 \\
+E8 & 2 attentive VN & 0.2418 & 0.5261 & 0.8791 & 43 \\
+E12 & size-supervised & 0.2363 & 0.5187 & 0.8825 & 48 \\
+\bottomrule
+\end{tabular}
+
+\vspace{2mm}
+\small
+\begin{itemize}
+  \item MP full 上 E4 重新成为最优，E7/E8/E12 都没有超过 E4。
+  \item 这说明 HZW 上的“size $\rightarrow$ 开第二槽位”假设不能直接迁移到 MP full。
+  \item 但这还不能直接判定模型失败，因为目标标签来源已经发生变化。
+\end{itemize}
+\end{frame}
+
+\begin{frame}{不是因为 MP 更小}
+\scriptsize
+\centering
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{l c c c c c c}
+\toprule
+数据集 & 样本数 & median N & mean N & $>80$ 占比 & $>160$ 占比 & 最大 N \\
+\midrule
+HZW all & 95,497 & 20 & 28.90 & 5.02\% & 0.35\% & 432 \\
+MP full all & 154,875 & 20 & 31.39 & 7.76\% & 1.17\% & 444 \\
+HZW test & 9,551 & 20 & 29.01 & 5.05\% & 0.37\% & 312 \\
+MP test & 15,488 & 20 & 31.33 & 7.63\% & 1.16\% & 392 \\
+\bottomrule
+\end{tabular}
+
+\vspace{2mm}
+\small
+\begin{itemize}
+  \item MP 并不是更小，反而大结构占比更高。
+  \item 因此“MP 小结构太多，所以双槽位无效”这个解释不成立。
+  \item 更关键的问题是：\texttt{num\_atoms} 在 MP 标签下不是稳定的“需要第二全局槽位”的代理变量。
+\end{itemize}
+\end{frame}
+
+\begin{frame}{MP-HZW matched clean 当前结果}
+\scriptsize
+\centering
+\begin{tabular}{l l c c c c}
+\toprule
+实验 & 模型 & MAE$\downarrow$ & RMSE$\downarrow$ & $R^2\uparrow$ & Metal F1$\uparrow$ \\
+\midrule
+E2 & ALIGNN & 0.2534 & 0.5019 & 0.8973 & 0.8600 \\
+E3 & M3GNet & 0.2966 & 0.5726 & 0.8663 & 0.8489 \\
+E4 & ALIGNN + VN & \textbf{0.2446} & 0.5032 & 0.8968 & 0.8734 \\
+E5 & Transformer & 0.2575 & 0.5179 & 0.8906 & 0.8670 \\
+E7 & 1 attentive VN & 0.2478 & 0.5089 & 0.8944 & 0.8734 \\
+E8 & 2 attentive VN & 0.2476 & 0.5111 & 0.8935 & \textbf{0.8757} \\
+E10 & Val-routed E4/E8 & 0.2455 & 0.5044 & 0.8963 & 0.8730 \\
+\bottomrule
+\end{tabular}
+
+\vspace{1mm}
+\small
+截至本地同步结果：E4 仍是最稳模型；E1/E12 clean 补跑结果尚未进入本地最终汇总。
+\end{frame}
+
+\begin{frame}{硬阈值路由为什么不稳}
+\scriptsize
+\centering
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{l c c c c l}
+\toprule
+原子数桶 & 样本数 & E4 & E8 & E10 & 现象 \\
+\midrule
+$\le10$ & 2525 & 0.1393 & \textbf{0.1378} & 0.1393 & E8 略好但 E10 没用上 \\
+11--20 & 2086 & 0.2317 & \textbf{0.2276} & 0.2317 & E8 略好但 E10 没用上 \\
+21--40 & 2300 & \textbf{0.2955} & 0.3008 & 0.2955 & E4 更好 \\
+41--80 & 1603 & \textbf{0.3249} & 0.3359 & 0.3249 & E4 更好 \\
+81--160 & 429 & \textbf{0.3364} & 0.3643 & 0.3620 & 阈值路由最吃亏 \\
+$>160$ & 34 & 0.4598 & \textbf{0.3834} & \textbf{0.3834} & E8 明显更好 \\
+\bottomrule
+\end{tabular}
+
+\vspace{2mm}
+\small
+验证集阈值 82 在 test 上不鲁棒；最优 test 阈值约 144，只保留极大结构给 E8。
+\end{frame}
+
+\section{数据质量诊断}
+
+\begin{frame}{金属/非金属冲突：两个方向都存在}
+\scriptsize
+\centering
+\setlength{\tabcolsep}{4pt}
+\begin{tabularx}{\textwidth}{p{2.4cm} p{1.3cm} p{1.2cm} p{3.2cm} Y}
+\toprule
+冲突方向 & 数量 & 比例 & 强冲突例子 & 解释 \\
+\midrule
+MP metal-like，HZW nonmetal & 2,968 & 3.197\% & HZW gap $\ge 1$ eV: 1,130；$\ge 2$ eV: 447 & MP 认为近似金属，但 HZW 标签有明显带隙。 \\
+MP nonmetal-like，HZW metal & 5,028 & 5.595\% & MP gap $\ge 1$ eV: 561；$\ge 2$ eV: 170 & MP 有正带隙，但 HZW 标签是 0。 \\
+删除两类冲突后 & 84,830 & -- & train 67,865；val 8,481；test 8,484 & 得到 class-consistent matched 数据。 \\
+\bottomrule
+\end{tabularx}
+
+\vspace{2mm}
+\small
+这不是简单噪声点，而是足以影响 metal/nonmetal 边界与回归损失的系统性标签冲突。
+\end{frame}
+
+\begin{frame}{同类样本仍有大数值差异}
+\small
+\begin{columns}[T,onlytextwidth]
+\begin{column}{0.32\textwidth}
+\begin{block}{数量}
+删除金属/非金属冲突后，仍有 \textbf{1,317} 个 same-class 样本满足
+\[
+|\text{MP gap} - \text{HZW gap}| > 1\ \text{eV}.
+\]
+\end{block}
+\end{column}
+\begin{column}{0.32\textwidth}
+\begin{block}{分布}
+这些样本全部属于非金属类；其中 21--40 原子桶最多，为 \textbf{487} 个。
+\end{block}
+\end{column}
+\begin{column}{0.32\textwidth}
+\begin{alertblock}{含义}
+即使金属/非金属类别一致，两个标签源在 gap 数值上也存在不可忽略偏差。
+\end{alertblock}
+\end{column}
+\end{columns}
+\end{frame}
+
+\begin{frame}{当前最可信解释}
+\small
+\begin{itemize}
+  \item HZW 上 E12/E13 有效，说明 dual-slot + size supervision + physics 的模型假设不是凭空无效。
+  \item MP full 和 MP-HZW matched 上 E4 更稳，说明该假设对标签源和数据分布敏感。
+  \item MP-HZW matched 不是“同一批结构、同一套标签”的纯复现实验；训练脚本使用的是 MP summary \texttt{band\_gap}，不是 HZW 原始 gap。
+  \item 金属/非金属冲突和 $>1$ eV 数值差异会直接改变模型排序，因此当前负结果不能简单解释为模型结构失败。
+\end{itemize}
+\end{frame}
+
+\section{结论}
+
+\begin{frame}{总结}
+\small
+\begin{itemize}
+  \item 完成了 CGCNN、ALIGNN、M3GNet 三类基线及多种 ALIGNN 增强模型的实验闭环。
+  \item HZW 数据上：E4 证明朴素全局超节点有效，E12/E13 进一步取得最优结果。
+  \item MP 数据上：复杂注意力超节点没有稳定超过 E4，说明原假设不能直接泛化。
+  \item 数据诊断显示：MP 与 HZW 标签存在明显冲突，这是当前模型结论不一致的关键混杂因素。
+\end{itemize}
+\end{frame}
+
+\begin{frame}[allowframebreaks]{参考文献}
+\footnotesize
+\begin{thebibliography}{99}
+\bibitem{cgcnn} Tian Xie and Jeffrey C. Grossman. Crystal Graph Convolutional Neural Networks for an Accurate and Interpretable Prediction of Material Properties. \textit{Physical Review Letters}, 120(14):145301, 2018.
+\bibitem{alignn} Kamal Choudhary and Brian DeCost. Atomistic Line Graph Neural Network for improved materials property predictions. \textit{npj Computational Materials}, 7:185, 2021.
+\bibitem{m3gnet} Chi Chen and Shyue Ping Ong. A universal graph deep learning interatomic potential for the periodic table. \textit{Nature Computational Science}, 2:718--728, 2022.
+\bibitem{mp} Anubhav Jain et al. Commentary: The Materials Project: A materials genome approach to accelerating materials innovation. \textit{APL Materials}, 1:011002, 2013.
+\bibitem{matbench} Alexander Dunn et al. Benchmarking materials property prediction methods: the Matbench test set and Automatminer reference algorithm. \textit{npj Computational Materials}, 6:138, 2020.
+\end{thebibliography}
+\end{frame}
+
+\end{document}

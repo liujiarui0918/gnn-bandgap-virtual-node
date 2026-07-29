@@ -1,0 +1,76 @@
+.venv/
+data/processed/
+logs/
+
+# ---------------------------------------------------------------------------
+# Secrets — never commit
+# ---------------------------------------------------------------------------
+*.pem
+*.key
+*.pfx
+id_rsa*
+.env
+.env.*
+.mp_api_key
+
+# ---------------------------------------------------------------------------
+# Proprietary and bulk data.
+# HZW band-gap labels are licensed from Hongzhiwei Technology and may not be
+# redistributed; results/ additionally holds derived tables that embed them.
+# ---------------------------------------------------------------------------
+api_downloads/
+results/
+*.jsonl.gz
+*.jsonl.gz.tmp
+*.mdb
+
+# ---------------------------------------------------------------------------
+# Vendored third-party source trees and pretrained weights
+# ---------------------------------------------------------------------------
+.vendor/
+vendor_runtime_bundle.tar.gz
+
+# ---------------------------------------------------------------------------
+# Runtime logs and monitoring output
+# ---------------------------------------------------------------------------
+monitoring/
+log2.txt
+*.log
+
+# ---------------------------------------------------------------------------
+# Caches, debug renders, review screenshots
+# ---------------------------------------------------------------------------
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.pytest_tmp/
+artifacts/
+_debug*
+_chk*
+
+# ---------------------------------------------------------------------------
+# LaTeX build artifacts
+# ---------------------------------------------------------------------------
+*.aux
+*.out
+*.nav
+*.snm
+*.toc
+*.fls
+*.fdb_latexmk
+*.synctex.gz
+*.bbl
+*.blg
+*.bak
+
+# ---------------------------------------------------------------------------
+# Compiled PDFs.
+# Root-level PDFs are either build products of the .tex sources in this repo or
+# third-party copyrighted reference papers; figures/**/*.pdf is kept because the
+# paper sources need it to compile.
+# ---------------------------------------------------------------------------
+/*.pdf
+docs/**/*.pdf
+
+# Page screenshots cropped from third-party published papers
+figures/Virtual_Node_Graph_Neural_Network_*
