@@ -1,17 +1,23 @@
 """Build the physics-analysis composite figure (fig5) for the paper.
 
-Four panels driven by the verified per-sample prediction CSVs (seed-42
-canonical runs, test split only):
+Three main-text panels driven by the verified per-sample prediction CSVs
+(seed-42 canonical runs, test split only):
 
-    (a) periodic-table heatmap of per-element test MAE for T7 (MP labels);
-    (b) periodic-table heatmap of the per-element MAE change T7 - T2 (MP);
-    (c) MAE by crystal system (T2/T4/T7, MP labels);
-    (d) MAE by true band-gap bucket (T2/T4/T7, MP solid / HZW dashed).
+    (a) periodic-table heatmap of the per-element MAE change T7 - T2 (MP);
+    (b) MAE by crystal system (T2/T4/T7, MP labels);
+    (c) MAE by true band-gap bucket (T2/T4/T7, MP solid / HZW dashed).
+
+The absolute per-element MAE heatmap that used to occupy the main-text panel
+(a) is now written separately as figures/paper/figS5_element_mae_absolute for
+the Supplementary Information: at \\textwidth two full periodic tables side by
+side left each cell about 3 mm wide, and the absolute map is descriptive
+context rather than evidence for a claim in the main text. The delta map, which
+carries the claim, is drawn at roughly double the cell size in its place.
 
 A sample containing element X contributes its absolute error to X. Elements
 with fewer than MIN_ELEMENT_N test samples are greyed out. No randomness is
-used anywhere in this script. Output: figures/paper/fig5_physics_analysis
-as PDF + PNG.
+used anywhere in this script. Outputs: figures/paper/fig5_physics_analysis and
+figures/paper/figS5_element_mae_absolute, each as PDF + PNG.
 """
 
 import re
@@ -46,11 +52,11 @@ plt.rcParams.update(
     }
 )
 
-# Same palette as build_academic_paper_figures.py (fixed categorical order:
-# T2 = BLUE, T4 = TEAL, T7 = ORANGE across all paper figures).
-BLUE = "#2D5F8B"
-TEAL = "#3A8D8F"
-ORANGE = "#D9772A"
+# Same Okabe-Ito palette as build_academic_paper_figures.py (fixed categorical
+# order: T2 = BLUE, T4 = TEAL, T7 = ORANGE across all paper figures).
+BLUE = "#0072B2"
+TEAL = "#009E73"
+ORANGE = "#E69F00"
 INK = "#222222"
 MUTED = "#6B7280"
 GREY_CELL = "#D6D6D6"
@@ -208,7 +214,18 @@ def _cell_text_color(facecolor) -> str:
     return INK if (0.299 * r + 0.587 * g + 0.114 * b) > 0.55 else "white"
 
 
-def draw_periodic_table(ax, fig, values, counts, cmap, norm, cbar_label) -> None:
+def draw_periodic_table(
+    ax,
+    fig,
+    values,
+    counts,
+    cmap,
+    norm,
+    cbar_label,
+    symbol_fontsize: float = 5.6,
+    cbar_ticks=None,
+    note_fontsize: float = 6.8,
+) -> None:
     """values/counts: dict symbol -> value / n. Cells with n < MIN_ELEMENT_N grey."""
     for symbol in ELEMENTS:
         row, col = POSITIONS[symbol]
@@ -238,7 +255,7 @@ def draw_periodic_table(ax, fig, values, counts, cmap, norm, cbar_label) -> None
             symbol,
             ha="center",
             va="center",
-            fontsize=5.6,
+            fontsize=symbol_fontsize,
             color=text_color,
         )
     ax.set_xlim(0.7, 19.3)
@@ -253,18 +270,41 @@ def draw_periodic_table(ax, fig, values, counts, cmap, norm, cbar_label) -> None
         pad=0.02,
         shrink=0.62,
     )
+    if cbar_ticks is not None:
+        cbar.set_ticks(cbar_ticks)
     cbar.set_label(cbar_label, fontsize=8)
     cbar.ax.tick_params(labelsize=7)
-    ax.text(
-        0.99,
-        0.98,
-        f"grey: $n<{MIN_ELEMENT_N}$ test samples",
-        transform=ax.transAxes,
-        ha="right",
-        va="top",
-        fontsize=6.8,
-        color=MUTED,
-    )
+    # Two distinct greys are in play and reviewers conflate them: an element
+    # present but under-sampled, versus an element absent from the test split.
+    # Both are spelled out with a colour swatch rather than left to the caption.
+    legend_items = [
+        (GREY_CELL, f"$n<{MIN_ELEMENT_N}$ test structures (not scored)"),
+        ("white", "element absent from the test split"),
+    ]
+    for k, (face, text) in enumerate(legend_items):
+        y = 0.985 - k * 0.055
+        ax.add_patch(
+            Rectangle(
+                (0.615, y - 0.030),
+                0.030,
+                0.034,
+                transform=ax.transAxes,
+                facecolor=face,
+                edgecolor="#BBBBBB",
+                linewidth=0.4,
+                clip_on=False,
+            )
+        )
+        ax.text(
+            0.655,
+            y - 0.013,
+            text,
+            transform=ax.transAxes,
+            ha="left",
+            va="center",
+            fontsize=note_fontsize,
+            color=MUTED,
+        )
 
 
 def panel_label(ax, label: str, x: float = -0.06) -> None:
@@ -319,51 +359,47 @@ def main() -> None:
         f"(min {qual['mae'].idxmin()}, max {qual['mae'].idxmax()})"
     )
 
-    fig, axes = plt.subplots(
-        2,
-        2,
-        figsize=(12.8, 9.4),
-        gridspec_kw={"height_ratios": [1.25, 1.0], "width_ratios": [1.0, 1.0]},
-    )
+    # Main text: one periodic table (the delta map, which carries the claim)
+    # spanning the full width on top, with the two aggregate panels below. The
+    # absolute map is written separately for the SI.
+    fig = plt.figure(figsize=(12.8, 9.8))
+    gs = fig.add_gridspec(2, 2, height_ratios=[1.45, 1.0], hspace=0.26, wspace=0.20)
+    ax_delta = fig.add_subplot(gs[0, :])
+    ax_sys = fig.add_subplot(gs[1, 0])
+    ax_bucket = fig.add_subplot(gs[1, 1])
 
-    # --- (a) per-element MAE, T7 ---
-    ax = axes[0, 0]
-    norm_a = Normalize(vmin=qual["mae"].min(), vmax=qual["mae"].max())
-    draw_periodic_table(
-        ax,
-        fig,
-        qual["mae"].to_dict(),
-        el7["n"].to_dict(),
-        plt.get_cmap("viridis"),
-        norm_a,
-        "Per-element test MAE (eV)",
-    )
-    ax.set_title("ALIGNN+VN+Huber, MP labels", fontsize=9.5)
-    panel_label(ax, "(a)", x=0.0)
-
-    # --- (b) per-element delta MAE T7 - T2 ---
+    # --- (a) per-element delta MAE T7 - T2, main text ---
     delta = (el7["mae"] - el2["mae"]).loc[qual.index]
     lim = float(np.abs(delta).max())
-    ax = axes[0, 1]
+    # TwoSlopeNorm already pins white at 0; the tick makes the neutral point
+    # readable on the colorbar itself instead of implied by the caption.
+    step = lim / 2.0
+    delta_ticks = [-lim, -step, 0.0, step, lim]
     norm_b = TwoSlopeNorm(vmin=-lim, vcenter=0.0, vmax=lim)
     draw_periodic_table(
-        ax,
+        ax_delta,
         fig,
         delta.to_dict(),
         el7["n"].to_dict(),
         plt.get_cmap("RdBu_r"),
         norm_b,
-        "$\\Delta$MAE = (VN+Huber) $-$ ALIGNN (eV);  blue = improvement",
+        "$\\Delta$MAE = (VN+Huber) $-$ ALIGNN (eV);  blue = improvement, white = no change",
+        symbol_fontsize=8.0,
+        cbar_ticks=delta_ticks,
+        note_fontsize=7.5,
     )
-    ax.set_title("Where the VN+Huber gain lives, MP labels", fontsize=9.5)
-    panel_label(ax, "(b)", x=0.0)
+    ax_delta.set_title(
+        "Where the VN+Huber gain lives: per-element MAE change vs ALIGNN, MP labels",
+        fontsize=10,
+    )
+    panel_label(ax_delta, "(a)", x=0.0)
     print(
         f"[sanity] per-element dMAE range {delta.min():+.3f} ({delta.idxmin()}) to "
         f"{delta.max():+.3f} ({delta.idxmax()}) eV; improved elements: "
         f"{int((delta < 0).sum())}/{len(delta)}"
     )
 
-    # --- (c) MAE by crystal system (MP labels) ---
+    # --- (b) MAE by crystal system (MP labels) ---
     systems = ["triclinic", "monoclinic", "orthorhombic", "tetragonal", "trigonal", "hexagonal", "cubic"]
     merged = {
         t: preds[("mp", t)].merge(meta, on="sample_id", how="left") for t in ("T2", "T4", "T7")
@@ -373,7 +409,7 @@ def main() -> None:
     print("[sanity] crystal-system test counts:", {s: int(counts.get(s, 0)) for s in systems},
           f"(no metadata: {dropped})")
 
-    ax = axes[1, 0]
+    ax = ax_sys
     x = np.arange(len(systems))
     width = 0.26
     for k, t in enumerate(("T2", "T4", "T7")):
@@ -394,13 +430,15 @@ def main() -> None:
     ax.set_title("MAE by crystal system (symmetry ascending), MP labels", fontsize=9.5)
     ax.legend(frameon=False, loc="upper right", fontsize=7.5)
     ax.grid(axis="y", alpha=0.2)
-    panel_label(ax, "(c)", x=-0.10)
+    panel_label(ax, "(b)", x=-0.10)
 
-    # --- (d) MAE by true band-gap bucket, MP solid / HZW dashed ---
-    ax = axes[1, 1]
+    # --- (c) MAE by true band-gap bucket, MP solid / HZW dashed ---
+    # Model identity is carried by colour AND marker shape; label source by
+    # line style AND marker fill, so the panel survives greyscale printing.
+    ax = ax_bucket
     xb = np.arange(len(BUCKET_LABELS))
     markers = {"T2": "o", "T4": "s", "T7": "^"}
-    for src, linestyle in (("mp", "-"), ("hzw", "--")):
+    for src, linestyle, fill in (("mp", "-", "full"), ("hzw", "--", "none")):
         for t in ("T2", "T4", "T7"):
             pred = preds[(src, t)]
             by_bucket = pred.groupby(bucket_index(pred["target"]))["abs_err"].mean()
@@ -410,7 +448,11 @@ def main() -> None:
                 color=MODEL_COLORS[t],
                 linestyle=linestyle,
                 marker=markers[t],
-                markersize=4,
+                markersize=5,
+                fillstyle=fill,
+                markerfacecolor=MODEL_COLORS[t] if fill == "full" else "white",
+                markeredgecolor=MODEL_COLORS[t],
+                markeredgewidth=1.1,
                 linewidth=1.4,
             )
         n_per = bucket_index(preds[(src, "T7")]["target"]).value_counts().sort_index()
@@ -421,22 +463,48 @@ def main() -> None:
     ax.set_ylabel("Test MAE (eV)")
     ax.set_title("MAE by true band-gap bucket", fontsize=9.5)
     handles = [
-        Line2D([], [], color=MODEL_COLORS[t], marker=markers[t], markersize=4, linewidth=1.4,
+        Line2D([], [], color=MODEL_COLORS[t], marker=markers[t], markersize=5, linewidth=1.4,
                label=MODEL_LABELS[t])
         for t in ("T2", "T4", "T7")
     ] + [
-        Line2D([], [], color=INK, linestyle="-", linewidth=1.4, label="MP labels"),
-        Line2D([], [], color=INK, linestyle="--", linewidth=1.4, label="HZW labels"),
+        Line2D([], [], color=INK, linestyle="-", marker="o", markersize=5,
+               markerfacecolor=INK, linewidth=1.4, label="MP labels (filled)"),
+        Line2D([], [], color=INK, linestyle="--", marker="o", markersize=5,
+               markerfacecolor="white", markeredgecolor=INK, linewidth=1.4,
+               label="HZW labels (open)"),
     ]
     ax.legend(handles=handles, frameon=False, loc="lower right", fontsize=7, ncol=2)
     ax.grid(axis="y", alpha=0.2)
-    panel_label(ax, "(d)", x=-0.10)
+    panel_label(ax, "(c)", x=-0.10)
 
-    fig.subplots_adjust(wspace=0.18, hspace=0.30, top=0.95, bottom=0.07, left=0.06, right=0.98)
+    fig.subplots_adjust(top=0.95, bottom=0.07, left=0.06, right=0.98)
     fig.savefig(OUT / "fig5_physics_analysis.pdf", bbox_inches="tight", pad_inches=0.04)
     fig.savefig(OUT / "fig5_physics_analysis.png", dpi=240, bbox_inches="tight", pad_inches=0.04)
     plt.close(fig)
     print(f"Wrote fig5_physics_analysis.[pdf|png] to {OUT}")
+
+    # --- Supplementary: absolute per-element MAE for T7 ---
+    figs, axs = plt.subplots(1, 1, figsize=(9.0, 6.4))
+    norm_a = Normalize(vmin=qual["mae"].min(), vmax=qual["mae"].max())
+    draw_periodic_table(
+        axs,
+        figs,
+        qual["mae"].to_dict(),
+        el7["n"].to_dict(),
+        plt.get_cmap("viridis"),
+        norm_a,
+        "Per-element test MAE (eV)",
+        symbol_fontsize=7.0,
+        note_fontsize=7.0,
+    )
+    axs.set_title(
+        "Absolute per-element test MAE, ALIGNN+VN+Huber, MP labels",
+        fontsize=10,
+    )
+    figs.savefig(OUT / "figS5_element_mae_absolute.pdf", bbox_inches="tight", pad_inches=0.04)
+    figs.savefig(OUT / "figS5_element_mae_absolute.png", dpi=240, bbox_inches="tight", pad_inches=0.04)
+    plt.close(figs)
+    print(f"Wrote figS5_element_mae_absolute.[pdf|png] to {OUT}")
 
 
 if __name__ == "__main__":

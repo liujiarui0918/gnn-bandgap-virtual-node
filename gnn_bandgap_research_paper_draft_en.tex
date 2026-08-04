@@ -50,7 +50,7 @@ The electronic band gap is one of the most important properties for screening se
 
 Crystal GNNs represent periodic materials as graphs whose nodes are atoms and whose edges encode local neighborhoods under periodic boundary conditions. CGCNN introduced a crystal graph convolutional architecture for material property prediction \cite{xie2018cgcnn}. ALIGNN further improves the geometric representation by combining an atom graph with a line graph so that bond-angle information can be explicitly modeled \cite{choudhary2021alignn}. M3GNet extends material graph learning toward universal interatomic potentials and many-body interactions \cite{chen2022m3gnet}. These models demonstrate that local geometry is highly informative for materials prediction.
 
-However, local message passing has an inherent limitation: long-range or graph-level information must be transmitted through multiple layers. Increasing depth can introduce over-smoothing, in which node representations become indistinguishable as depth grows \cite{li2018deeper,oono2020graph,rusch2023survey}, as well as optimization difficulty and unnecessary complexity. This motivates the use of global tokens or virtual nodes that aggregate graph-level context and broadcast it back to local atom representations; the idea dates back to the master node of message-passing neural networks \cite{gilmer2017neural} and reappears as the global token of graph Transformers \cite{ying2021transformers}, and message passing with a virtual node can provably approximate global self-attention \cite{cai2023connection}. The central modeling question of this project is therefore: for crystal band-gap prediction, does adding explicit global information improve a strong local geometric backbone, and if so, which global mechanism is actually stable?
+However, local message passing has an inherent limitation: long-range or graph-level information must be transmitted through multiple layers. Increasing depth can introduce over-smoothing, in which node representations become indistinguishable as depth grows \cite{li2018deeper,oono2020graph,rusch2023survey}, and the finite receptive field of local message passing also creates an information bottleneck---over-squashing---in which long-range dependencies are compressed through a fixed-size representation \cite{alon2021bottleneck,topping2022understanding}. The two problems motivate both architectural remedies \cite{zhao2020pairnorm,rong2020dropedge,chen2020gcnii,xu2018jknet} and, more directly, the use of global tokens or virtual nodes that aggregate graph-level context and broadcast it back to local atom representations; the idea dates back to the master node of message-passing neural networks \cite{gilmer2017neural}, is generalized to graph-level context vectors in the graph-network framework \cite{battaglia2018relational}, and reappears as the global token of graph Transformers \cite{ying2021transformers}. Message passing with a virtual node can provably approximate global self-attention \cite{cai2023connection}, and recent analyses show that virtual nodes relieve over-squashing while their own limitations are tied to node heterogeneity \cite{southern2024understanding}. The central modeling question of this project is therefore: for crystal band-gap prediction, does adding explicit global information improve a strong local geometric backbone, and if so, which global mechanism is actually stable?
 
 The answer is complicated by a second issue: data labels are not always consistent across sources. Early experiments on the HZW band-gap dataset (a proprietary DFT database provided by Hongzhiwei Technology, in which each record cross-references a Materials Project entry)%
 \footnote{HZW denotes the band-gap database of Hongzhiwei Technology (Shanghai) Co., Ltd., accessed through the provider's cloud API and used with permission; the underlying first-principles computational protocol is documented by the provider.
@@ -60,18 +60,18 @@ We therefore pursue the modelling question and the data question together. On th
 
 \section{Background and Related Work}
 
-Crystal graph neural networks differ mainly in how much geometry they make explicit. CGCNN represents a crystal as a graph and learns local chemical environments through graph convolution \cite{xie2018cgcnn}; it is simple, interpretable, and effective as a baseline, but its geometric representation is mostly local and edge-centered. ALIGNN improves on this by introducing a line graph in which bonds become nodes, enabling explicit bond-angle message passing \cite{choudhary2021alignn}. This distinction matters for the present target, because local coordination geometry and bond angles are closely related to electronic structure, which is why ALIGNN is a strong baseline for band-gap prediction. M3GNet further incorporates many-body geometric information and was designed as a more general materials graph framework \cite{chen2022m3gnet}. Related geometric architectures include SchNet with continuous-filter convolutions \cite{schutt2018schnet} and the MEGNet graph-network framework \cite{chen2019graph}, while periodic graph Transformers such as Matformer model longer-range crystal structure with attention \cite{yan2022periodic}. We adopt ALIGNN as the backbone throughout, because it is consistently the strongest conventional baseline across the settings tested here.
+Crystal graph neural networks differ mainly in how much geometry they make explicit. CGCNN represents a crystal as a graph and learns local chemical environments through graph convolution \cite{xie2018cgcnn}; it is simple, interpretable, and effective as a baseline, but its geometric representation is mostly local and edge-centered. ALIGNN improves on this by introducing a line graph in which bonds become nodes, enabling explicit bond-angle message passing \cite{choudhary2021alignn}. This distinction matters for the present target, because local coordination geometry and bond angles are closely related to electronic structure, which is why ALIGNN is a strong baseline for band-gap prediction. M3GNet further incorporates many-body geometric information and was designed as a more general materials graph framework \cite{chen2022m3gnet}. Related geometric architectures include SchNet with continuous-filter convolutions \cite{schutt2018schnet}, the MEGNet graph-network framework \cite{chen2019graph}, an improved CGCNN variant that incorporates Voronoi-tessellated structural information \cite{park2020icgcnn}, directional message-passing schemes \cite{gasteiger2020dimenet,gasteiger2021gemnet}, and equivariant message-passing models \cite{schutt2021painn,batzner2022nequip,batatia2022mace}. Attention-based crystal models pursue the same long-range goal: periodic graph Transformers such as Matformer \cite{yan2022periodic} and ComFormer \cite{yan2024comformer}, and the molecular graph transformer of Anselmi et al.\ \cite{anselmi2024mgt} extend receptive fields through self-attention, while PotNet approximates complete interatomic potentials through efficient infinite-body summations \cite{lin2023potnet} and CHGNet provides a charge-informed universal neural-network potential \cite{deng2023chgnet}. We adopt ALIGNN as the backbone throughout, because it is consistently the strongest conventional baseline across the settings tested here.
 
-What all of these architectures share is that graph-level information must travel through local edges. Virtual nodes are the standard remedy: a virtual node collects information from all graph nodes and redistributes the global representation back to each of them. The idea originates as the master node in message-passing neural networks for quantum chemistry \cite{gilmer2017neural} and reappears as the special \([\mathrm{VNode}]\) token in graph Transformers such as Graphormer \cite{ying2021transformers}. It also has a theoretical justification: message passing augmented with a virtual node can approximate the self-attention layer of a graph Transformer arbitrarily well \cite{cai2023connection}, so a virtual node is a computationally cheap substitute for full global attention. Over-smoothing supplies a complementary motivation, since repeated local mixing drives node representations toward indistinguishability as depth grows \cite{li2018deeper,oono2020graph}, and a global token provides a shortcut route for graph-level information that does not require deeper local propagation. In materials science, virtual nodes have recently enabled full phonon-band prediction \cite{okabe2024virtual}, and periodic graph Transformers pursue the same long-range goal through attention \cite{yan2022periodic}. Cost is not the only argument for the simpler mechanism. Because the band gap is often dominated by local bonding chemistry, an overly powerful global attention module can inject noise or overfit source-specific artifacts, which is precisely the failure mode observed later in this paper. We therefore compare simple virtual nodes against more complex global-attention and dual-slot variants rather than assuming that more global capacity is better.
+What all of these architectures share is that graph-level information must travel through local edges. Virtual nodes are the standard remedy: a virtual node collects information from all graph nodes and redistributes the global representation back to each of them. The idea originates as the master node in message-passing neural networks for quantum chemistry \cite{gilmer2017neural}, is generalized to graph-level context vectors in the graph-network framework \cite{battaglia2018relational}, and reappears as the special \([\mathrm{VNode}]\) token in graph Transformers such as Graphormer \cite{ying2021transformers}. It also has a theoretical justification: message passing augmented with a virtual node can approximate the self-attention layer of a graph Transformer arbitrarily well \cite{cai2023connection}, so a virtual node is a computationally cheap substitute for full global attention; recent analyses further show that virtual nodes relieve over-squashing while their own benefits depend on node heterogeneity \cite{southern2024understanding}. Over-smoothing supplies a complementary motivation, since repeated local mixing drives node representations toward indistinguishability as depth grows \cite{li2018deeper,oono2020graph}, and a global token provides a shortcut route for graph-level information that does not require deeper local propagation; the depth problem has also been addressed architecturally by pair-wise feature normalization \cite{zhao2020pairnorm}, edge dropout \cite{rong2020dropedge}, initial-residual connections \cite{chen2020gcnii}, and jumping-knowledge aggregation \cite{xu2018jknet}. In materials science, virtual nodes have recently enabled full phonon-band prediction \cite{okabe2024virtual}, and periodic graph Transformers pursue the same long-range goal through attention \cite{yan2022periodic}. Cost is not the only argument for the simpler mechanism. Because the band gap is often dominated by local bonding chemistry, an overly powerful global attention module can inject noise or overfit source-specific artifacts, which is precisely the failure mode observed later in this paper. We therefore compare simple virtual nodes against more complex global-attention and dual-slot variants rather than assuming that more global capacity is better.
 
-The second axis of this study concerns the labels rather than the model. Materials data may contain method-dependent labels, database-version differences, missing auxiliary quantities, or inconsistent metal/non-metal classification, and band gaps are particularly method-sensitive: large-scale benchmarks show systematic differences across exchange--correlation functionals \cite{borlido2019large}, so two DFT databases can disagree even for the same relaxed structure. The disagreement is most severe near the zero-gap boundary, where regression and metal/non-metal classification meet. Robust regression is the natural response. Huber loss is a standard robust objective \cite{huber1964robust}: it behaves like mean squared error for small residuals and like mean absolute error for large ones, which suits a setting in which most labels are useful but a small fraction are noisy or heavy-tailed. Materials Project is a major public database for computational materials data \cite{jain2013mp} and Matbench provides standardized materials-property benchmarks \cite{dunn2020matbench}; the practical consequence pursued here is that even structurally matched MP and HZW records can carry non-equivalent band-gap labels.
+The second axis of this study concerns the labels rather than the model. Materials data may contain method-dependent labels, database-version differences, missing auxiliary quantities, or inconsistent metal/non-metal classification, and label noise of this kind is a recognized problem for deep models in general \cite{song2022learning} and for benchmark test sets in particular \cite{northcutt2021pervasive}. Band gaps are particularly method-sensitive: large-scale benchmarks show systematic differences across exchange--correlation functionals \cite{borlido2019large}, consistent with the known tendency of semilocal density functionals to underestimate band gaps \cite{perdew1985density,kuisma2010kohn}, the improved accuracy of screened hybrid functionals \cite{heyd2003hybrid}, and the recent assessment of meta-GGA functionals for solids \cite{kingsbury2022performance}, so two DFT databases can disagree even for the same relaxed structure. The disagreement is most severe near the zero-gap boundary, where regression and metal/non-metal classification meet. Robust regression is the natural response. Huber loss is a standard robust objective \cite{huber1964robust} that remains widely used in modern deep learning \cite{girshick2015fast,barron2019general,meyer2021alternative}: it behaves like mean squared error for small residuals and like mean absolute error for large ones, which suits a setting in which most labels are useful but a small fraction are noisy or heavy-tailed. Materials Project is a major public database for computational materials data \cite{jain2013mp}, alongside JARVIS \cite{choudhary2020jarvis}, the Open Quantum Materials Database \cite{kirklin2015oqmd}, and AFLOW \cite{curtarolo2012aflow}; Matbench provides standardized materials-property benchmarks \cite{dunn2020matbench}, and band-gap regression is itself an established machine-learning target \cite{zhuo2018predicting,ramakrishnan2015big}. The practical consequence pursued here is that even structurally matched MP and HZW records can carry non-equivalent band-gap labels.
 
 \section{Data: Structure-First Audit and Dual-Label Construction}
 \label{sec:data}
 
 The prediction target is the crystal band gap in eV. Each input sample provides atomic species, fractional coordinates, lattice information, and a periodic-neighbor graph construction; ALIGNN-based models additionally use a line graph to represent bond-angle relationships. The primary metric is test MAE, with RMSE, \(\rdsq\), metal/non-metal F1, best epoch, training time, and peak GPU memory as auxiliary diagnostics.
 
-Building a dual-label benchmark from two databases requires that structural correspondence and label consistency be established separately, and in that order. The HZW dataset contains 100,000 band-gap records, all but 29 of which carry a Materials Project cross-reference id, obtained from the cloud API of Hongzhiwei Technology (Shanghai) Co., Ltd.\ and used with permission. The MP band-gap labels are Kohn--Sham gaps computed at the GGA-PBE level of density functional theory, with GGA\(+U\) corrections applied to certain transition-metal compounds \cite{jain2013mp}; band gaps at this level of theory systematically underestimate experimental values, so all MP-label results should be read as predictions of the PBE gap rather than the experimental gap. We first paired HZW and MP records using crystal composition, atom count, lattice volume, fractional coordinates, and periodic structure matching, and only after this step did we count label conflicts. The complete audit is summarized in Figure~\ref{fig:data-audit} and Table~\ref{tab:data-audit}.
+Building a dual-label benchmark from two databases requires that structural correspondence and label consistency be established separately, and in that order. The HZW dataset contains 100,000 band-gap records, all but 29 of which carry a Materials Project cross-reference id, obtained from the cloud API of Hongzhiwei Technology (Shanghai) Co., Ltd.\ and used with permission. The MP band-gap labels are Kohn--Sham gaps computed at the GGA-PBE level of density functional theory, with GGA\(+U\) corrections applied to certain transition-metal compounds \cite{jain2013mp}; band gaps at this level of theory systematically underestimate experimental values \cite{perdew1985density}, so all MP-label results should be read as predictions of the PBE gap rather than the experimental gap. We first paired HZW and MP records using crystal composition, atom count, lattice volume, fractional coordinates, and periodic structure matching (with pymatgen \cite{ong2013pymatgen}), and only after this step did we count label conflicts. The complete audit is summarized in Table~\ref{tab:data-audit} and Supplementary Figure~S1.
 
 Two different threshold conventions are involved and must not be mixed. The \emph{audit statistics} (Table~\ref{tab:data-audit}, panel A) use diagnostic thresholds chosen to characterize disagreement: a record is counted as metal-like if its gap is \(\le 0.05\ \ev\) or it is flagged metallic, as non-metallic if its gap is \(\ge 0.10\ \ev\), and same-class numerical disagreement is counted above \(1\ \ev\). The \emph{dataset filter} (panel B) that actually constructs the T-series population uses a stricter zero-gap definition (\(\le 10^{-6}\ \ev\)) and removes only direct zero/nonzero conflicts and non-equal atom-count relations. Each panel's ledger closes on its own terms; entries from different panels are not comparable by subtraction. A third threshold pair defines the metal/non-metal F1 metric and is given in Section~\ref{sec:setup}.
 
@@ -106,14 +106,7 @@ Train / validation / test & 67,640 / 8,455 / 8,455 & Identical structure split f
 \end{tabularx}
 \end{table}
 
-\begin{figure}[htbp]
-\centering
-\includegraphics[width=\textwidth]{fig2_data_audit.pdf}
-\caption{Structure-first data construction, shown as two self-contained ledgers. (a) Audit conflict statistics under the audit thresholds (metal-like \(\le 0.05\ \ev\); non-metal \(\ge 0.10\ \ev\)). (b) The actual T-series filtering waterfall under the export zero-gap threshold (\(10^{-6}\ \ev\)), ending at 84,550 structures whose identical split is evaluated with both MP and HZW labels.}
-\label{fig:data-audit}
-\end{figure}
-
-The final T-series starts from the 92,787 structure-matched records, removes zero/nonzero band-gap conflicts and non-equal atom-count relations, and retains same-class numerical disagreement and volume-per-atom differences. The resulting 84,550 structures provide a controlled cross-source comparison without silently treating the two label sources as identical.
+The final T-series starts from the 92,787 structure-matched records, removes zero/nonzero band-gap conflicts and non-equal atom-count relations, and retains same-class numerical disagreement and volume-per-atom differences. The resulting 84,550 structures provide a controlled cross-source comparison without silently treating the two label sources as identical; the filtering ledger is shown in Supplementary Figure~S1.
 
 \section{Methods}
 
@@ -124,7 +117,7 @@ Figure~\ref{fig:architecture} gives the complete forward path of the model that 
 \begin{figure}[htbp]
 \centering
 \resizebox{\textwidth}{!}{\input{figures/paper/fig1_architecture.tex}}
-\caption{End-to-end model architecture. (a) Periodic crystal input and atom/line-graph construction. (b) Coupled ALIGNN updates encode local atom, bond, and angle geometry. (c) A single virtual node pools and broadcasts graph-level context; the decay variant changes only the epoch-dependent broadcast coefficient \(\gamma_t\). (d) Joint local/global readout predicts the band gap under a Huber objective.}
+\caption{End-to-end model architecture. (a) Periodic crystal input and atom/line-graph construction. (b) Coupled ALIGNN updates encode local atom, bond, and angle geometry. (c) A single virtual node pools and broadcasts graph-level context; the decay variant (T10 only), drawn as a dashed branch, changes only the epoch-dependent broadcast coefficient \(\gamma_t\), which is held at one in the recommended T4 and T7 models. (d) Joint local/global readout predicts the band gap under a Huber objective. The structure-first audit of Section~\ref{sec:data} precedes training and is shown as Supplementary Figure~S1.}
 \label{fig:architecture}
 \end{figure}
 
@@ -195,11 +188,11 @@ All schedule constants---the top-\(k\) fraction \(0.2\), the clip range, the war
 \subsection{Experimental setup}
 \label{sec:setup}
 
-All final T-series models use the relaxed clean equal-atoms dataset with 84,550 accepted records and a 67,640/8,455/8,455 train/validation/test split, and Table~\ref{tab:model-variants} lists the variants retained in the main comparison. Throughout the paper, models are indexed T1--T10; the ``T series'' denotes this final matched-benchmark stage, while the earlier exploratory stage (E series) and the strict-filter stage (S series) appear only in Section~\ref{sec:results-main} and the Supplementary Information (Supplementary Table~S6 gives the full nomenclature). The same structure split is evaluated twice: once with MP band-gap labels and once with HZW band-gap labels. Models are trained for up to 50 epochs, and test metrics are reported from the best validation epoch. The primary metric is MAE in eV. All ALIGNN-based variants use the AdamW optimizer with a one-cycle learning-rate schedule and gradient clipping (mixed precision disabled); the full optimizer, learning-rate, batch-size, scheduler, and hardware settings are listed in Supplementary Table~S14. All models were trained on a single RTX~4090 (24~GB) under Slurm.
+All final T-series models use the relaxed clean equal-atoms dataset with 84,550 accepted records and a 67,640/8,455/8,455 train/validation/test split, and Table~\ref{tab:model-variants} lists the variants retained in the main comparison. Throughout the paper, models are indexed T1--T10; the ``T series'' denotes this final matched-benchmark stage, while the earlier exploratory stage (E series) and the strict-filter stage (S series) appear only in Section~\ref{sec:results-main} and the Supplementary Information (Supplementary Table~S6 gives the full nomenclature). The same structure split is evaluated twice: once with MP band-gap labels and once with HZW band-gap labels. Models are trained for up to 50 epochs, and test metrics are reported from the best validation epoch. The primary metric is MAE in eV. All ALIGNN-based variants use the AdamW optimizer \cite{kingma2015adam,loshchilov2019adamw} with a one-cycle learning-rate schedule \cite{smith2019superconvergence} and gradient clipping (mixed precision disabled); the full optimizer, learning-rate, batch-size, scheduler, and hardware settings are listed in Supplementary Table~S14. All models were trained on a single RTX~4090 (24~GB) under Slurm.
 
 The metal/non-metal F1 metric carries its own threshold convention, the third in this paper. It treats ``metal'' as the positive class with an asymmetric threshold pair: a reference label is metallic when its band gap is \(\le 10^{-8}\ \ev\) (i.e.\ a database-reported zero gap), while a prediction is counted as metallic when it falls below a tolerance of \(0.1\ \ev\), because a continuous regressor almost never outputs exactly zero. F1 is the harmonic mean of the resulting precision and recall. Because zero/nonzero conflicts were already removed during dataset construction, the metal reference labels are identical for the MP and HZW versions of each structure; this is why T1 attains nearly identical F1 on both sources. A sensitivity analysis over prediction thresholds \(\{0.01,0.05,0.1\}\ \ev\) is reported in Supplementary Table~S11.
 
-Because the MAE differences between the strongest variants are small, model pairs are compared with a paired bootstrap over the shared test set: for each pair we resample the test indices with replacement (\(B=10{,}000\), fixed seed), apply the same resampled indices to both models, and report the 95\% confidence interval of the MAE difference and the fraction of resamples in which one model wins (Supplementary Table~S7). This quantifies test-set sampling noise and is orthogonal to training randomness. The reproducibility utilities seed Python, NumPy, PyTorch, and DGL; the split is fixed at export time and does not depend on the training seed, so multi-seed runs vary only weight initialization and mini-batch order. Additional seeds use validation-MAE early stopping (patience of 8 epochs) to bound compute; the best-validation-checkpoint convention is identical across all runs, and across the 24 multi-seed runs the longest observed pre-best stall is 6 epochs, so this patience provably did not alter any multi-seed result (it triggered only for M3GNet, one epoch before the budget). The sensitivity and tuning-probe runs in the Supplementary Information report their own best/actual epoch counts. The six core models were each retrained with seeds 1042 and 2042 in addition to the original seed 42; we verified that the test-set sample identities are byte-identical across seeds, and Table~\ref{tab:main-results} reports mean \(\pm\) standard deviation over the three runs.
+Because the MAE differences between the strongest variants are small, model pairs are compared with a paired bootstrap over the shared test set \cite{efron1979bootstrap,efron1993introduction}, following the recommended practice of confidence-interval-based comparison of learning algorithms \cite{demsar2006statistical}: for each pair we resample the test indices with replacement (\(B=10{,}000\), fixed seed), apply the same resampled indices to both models, and report the 95\% confidence interval of the MAE difference and the fraction of resamples in which one model wins (Supplementary Table~S7). This quantifies test-set sampling noise and is orthogonal to training randomness. The reproducibility utilities seed Python, NumPy, PyTorch \cite{paszke2019pytorch}, and DGL \cite{wang2019dgl}; the split is fixed at export time and does not depend on the training seed, so multi-seed runs vary only weight initialization and mini-batch order. Additional seeds use validation-MAE early stopping (patience of 8 epochs) to bound compute; the best-validation-checkpoint convention is identical across all runs, and across the 24 multi-seed runs the longest observed pre-best stall is 6 epochs, so this patience provably did not alter any multi-seed result (it triggered only for M3GNet, one epoch before the budget). The sensitivity and tuning-probe runs in the Supplementary Information report their own best/actual epoch counts. The six core models were each retrained with seeds 1042 and 2042 in addition to the original seed 42; we verified that the test-set sample identities are byte-identical across seeds, and Table~\ref{tab:main-results} reports mean \(\pm\) standard deviation over the three runs.
 
 \begin{table}[htbp]
 \centering
@@ -227,12 +220,19 @@ T10 & ALIGNN + virtual node + Huber + broadcast decay & Late-stage decay of glob
 
 The early exploratory stage on HZW labels (the E-series; see Supplementary Tables~S1, S5, and~S6 for definitions) motivated virtual nodes, dual slots, and physics-inspired objectives, and those exploratory results, including the size-supervised dual-slot variant with a validity-masked physics loss, are retained in Supplementary Table~S1 because they used an earlier data stage and are not directly comparable with the final controlled setting. What makes them worth reporting is that transfer to full MP labels reversed several of their rankings: attentive and size-supervised dual-slot variants were not reliably better than a single plain virtual node. The strict-filter stage (the S-series, trained under stricter label-consistency filters) nevertheless showed a size-dependent signal, with a dual plain node improving the \(>80\)-atom tail while losing on common medium-size structures; full bucket results are provided in Supplementary Table~S2. The controlled T-series below was designed to settle these reversals on a single fixed population.
 
-Figure~\ref{fig:main-results} and Table~\ref{tab:main-results} report that comparison on exactly the same 84,550 structures. ALIGNN is the strongest conventional baseline. A single plain virtual node improves MAE on both label sources, and this gain is statistically significant under the paired bootstrap (T4 vs.\ T2: MP \(\Delta\mathrm{MAE}=-0.0075\), 95\% CI \([-0.0121,-0.0028]\); HZW \(-0.0104\), CI \([-0.0147,-0.0060]\)). Huber loss then provides the most stable additional improvement: T7 reaches 0.2249 eV on MP labels and 0.1940 eV on HZW labels (seed-42 values; Table~\ref{tab:main-results} reports three-seed means), and the T7-over-T4 gain is likewise significant on both sources (MP \(-0.0076\), CI \([-0.0122,-0.0029]\); HZW \(-0.0078\), CI \([-0.0120,-0.0035]\)). Broadcast decay gives the lowest single-run MP MAE, 0.2237 eV, but its advantage over T7 is not statistically resolved (MP \(\Delta\mathrm{MAE}=-0.0012\), CI \([-0.0058,+0.0033]\), spanning zero), and on HZW labels decay is worse than T7 (\(+0.0030\), CI \([-0.0011,+0.0071]\)). We therefore treat T7 and T10 as statistically indistinguishable in MP MAE and highlight T10 only for its reduced prediction bias and RMSE in the seed-42 run. Retraining with two additional seeds confirms this reading. Across three independent seeds, the virtual-node gain (T4 vs.\ T2) and the Huber gain (T7 vs.\ T4) keep their sign in every run on both label sources (direction consistency 3/3), with seed-averaged magnitudes of \(-0.0080\pm0.0006\) and \(-0.0088\pm0.0013\) eV on MP labels and \(-0.0104\pm0.0011\) and \(-0.0086\pm0.0009\) eV on HZW labels. The decay margin, in contrast, does not survive retraining: on MP labels the seed-averaged T10\(-\)T7 difference collapses to \(-0.0004\pm0.0017\) eV with a sign flip in one of three seeds, and on HZW labels it averages \(+0.0018\pm0.0023\) eV (worse than T7), likewise with a sign flip in one of three seeds. Figure~\ref{fig:main-results}(c) makes the factorization explicit: the global-token and Huber gains transfer across sources and survive both the paired bootstrap and seed replication, whereas decay is source-dependent and within noise on both axes. Per-pair bootstrap intervals are listed in Supplementary Table~S7.
+Figure~\ref{fig:main-results} and Table~\ref{tab:main-results} report that comparison on exactly the same 84,550 structures. ALIGNN is the strongest conventional baseline. A single plain virtual node improves MAE on both label sources, and this gain is statistically significant under the paired bootstrap (T4 vs.\ T2: MP \(\Delta\mathrm{MAE}=-0.0075\), 95\% CI \([-0.0121,-0.0028]\); HZW \(-0.0104\), CI \([-0.0147,-0.0060]\)). Huber loss then provides the most stable additional improvement: T7 reaches 0.2249 eV on MP labels and 0.1940 eV on HZW labels (seed-42 values; Table~\ref{tab:main-results} reports three-seed means), and the T7-over-T4 gain is likewise significant on both sources (MP \(-0.0076\), CI \([-0.0122,-0.0029]\); HZW \(-0.0078\), CI \([-0.0120,-0.0035]\)). Broadcast decay gives the lowest single-run MP MAE, 0.2237 eV, but its advantage over T7 is not statistically resolved (MP \(\Delta\mathrm{MAE}=-0.0012\), CI \([-0.0058,+0.0033]\), spanning zero), and on HZW labels decay is worse than T7 (\(+0.0030\), CI \([-0.0011,+0.0071]\)). We therefore treat T7 and T10 as statistically indistinguishable in MP MAE and highlight T10 only for its reduced prediction bias and RMSE in the seed-42 run. Retraining with two additional seeds confirms this reading. Across three independent seeds, the virtual-node gain (T4 vs.\ T2) and the Huber gain (T7 vs.\ T4) keep their sign in every run on both label sources (direction consistency 3/3), with seed-averaged magnitudes of \(-0.0080\pm0.0006\) and \(-0.0088\pm0.0013\) eV on MP labels and \(-0.0104\pm0.0011\) and \(-0.0086\pm0.0009\) eV on HZW labels. The decay margin, in contrast, does not survive retraining: on MP labels the seed-averaged T10\(-\)T7 difference collapses to \(-0.0004\pm0.0017\) eV with a sign flip in one of three seeds, and on HZW labels it averages \(+0.0018\pm0.0023\) eV (worse than T7), likewise with a sign flip in one of three seeds. Figure~\ref{fig:main-results}(c) makes the factorization explicit: the global-token and Huber gains transfer across sources and survive both the paired bootstrap and seed replication, whereas decay is source-dependent and within noise on both axes. Figure~\ref{fig:statistical-evidence} summarizes the same statistical evidence directly: every virtual-node and Huber confidence interval excludes zero on both label sources, while both decay intervals cross it. Per-pair bootstrap intervals are listed in Supplementary Table~S7.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{fig6_statistical_evidence.pdf}
+\caption{Statistical evidence for the central claims. (a) Paired-bootstrap MAE differences between model pairs on the shared test set (\(B=10{,}000\), bootstrap seed 20260714); a negative value favours the newer variant. The virtual-node (T4 vs.\ T2), Huber (T7 vs.\ T4), and combined (T7 vs.\ T2) gains are significant on both label sources; the broadcast-decay margin (T10 vs.\ T7) is the only comparison whose interval crosses zero on both sources. (b) Final-layer mean pairwise cosine change relative to the ALIGNN baseline for the \(>80\)-atom subset (\(n=422\), \(B=2{,}000\)); negative values indicate less embedding homogenization. Filled markers denote intervals that exclude zero; open markers denote unresolved differences.}
+\label{fig:statistical-evidence}
+\end{figure}
 
 \begin{figure}[H]
 \centering
 \includegraphics[width=\textwidth]{fig3_main_results.pdf}
-\caption{Controlled model comparison. (a,b) Test MAE for the core models under MP and HZW labels; error bars show \(\pm1\) standard deviation over the independent training seeds. (c) Factorized MAE changes; positive values indicate an improvement (lower MAE) over the preceding variant. The plain global token and Huber loss transfer across sources, whereas broadcast decay improves MP but degrades HZW in the seed-42 run; both decay-related differences lie within paired-bootstrap noise and neither direction is seed-stable (Supplementary Table~S7). (d,e) Parity plots of the robust model (T7) on MP and HZW labels; the colour scale is logarithmic in point density and the dashed line marks perfect prediction. (f) Prediction-residual distributions of the MSE-trained (T4) and Huber-trained (T7) virtual-node models on MP labels; the corresponding error-quantile comparison is given in Figure~\ref{fig:mechanism-diagnostics}(a).}
+\caption{Controlled model comparison. (a,b) Test MAE for the core models under MP and HZW labels; error bars show \(\pm1\) standard deviation over the independent training seeds, and the insets magnify the four ALIGNN variants on a non-zero axis so that the virtual-node and Huber differences are visible. (c) Factorized MAE changes; positive values indicate an improvement (lower MAE) over the preceding variant. The plain global token and Huber loss transfer across sources, whereas broadcast decay improves MP but degrades HZW in the seed-42 run; both decay-related differences lie within paired-bootstrap noise and neither direction is seed-stable (Supplementary Table~S7). (d,e) Parity plots of the robust model (T7) on MP and HZW labels; the colour scale is logarithmic in point density, is shared between the two panels, and the dashed line marks perfect prediction. (f) Prediction-residual distributions of the MSE-trained (T4) and Huber-trained (T7) virtual-node models on MP labels, drawn as step outlines on a logarithmic count axis so that the tails remain visible; the corresponding error-quantile comparison is given in Figure~\ref{fig:mechanism-diagnostics}(a).}
 \label{fig:main-results}
 \end{figure}
 
@@ -261,14 +261,14 @@ One entry of Table~\ref{tab:main-results} warrants clarification before the anal
 \subsection{Chemical and symmetry structure of the error}
 \label{sec:physics-analysis}
 
-To connect the aggregate metrics to materials physics, Figure~\ref{fig:physics-analysis} resolves the test error of the robust model over the periodic table, the seven crystal systems, and the band-gap range. Three observations stand out. First, the error is chemically structured: hydrogen-bearing compounds show the highest per-element MAE (0.395~eV), and the light \(2p\) block (B--F) is systematically difficult (0.28--0.33~eV), consistent with the strong covalency and wide gap dispersion of these chemistries; the lowest errors occur for platinum-group \(4d/5d\) elements whose compounds are predominantly zero-gap metals. Second, the improvement from the virtual node and Huber loss is chemically broad rather than niche: relative to the ALIGNN baseline, the robust model lowers the per-element MAE for 58 of the 64 elements with at least 30 test structures, with the largest gains in \(5d\) and post-transition chemistry (Pt \(-0.040\)~eV, followed by La, Ir, Hg, Sb, I, and Bi) and only marginal degradations for five elements. Third, the error falls strongly with increasing crystal symmetry, from \(\approx0.30\)~eV in triclinic and monoclinic cells to 0.12--0.17~eV in hexagonal and cubic cells (the trend is not strictly monotonic---trigonal cells, for example, are harder than tetragonal ones---but the low-to-high-symmetry contrast is roughly a factor of two), and the Huber gain is largest precisely in the low-symmetry triclinic class (\(\approx-0.025\)~eV versus the baseline); low-symmetry cells are on average larger and chemically more diverse, which links this trend to the size-conditional global-token analysis of Section~\ref{sec:oversmoothing-discussion}.
+To connect the aggregate metrics to materials physics, Figure~\ref{fig:physics-analysis} resolves the test error of the robust model over the periodic table, the seven crystal systems, and the band-gap range. Three observations stand out. First, the error is chemically structured (the absolute per-element map is shown in Supplementary Figure~S2): hydrogen-bearing compounds show the highest per-element MAE (0.395~eV), and the light \(2p\) block (B--F) is systematically difficult (0.28--0.33~eV), consistent with the strong covalency and wide gap dispersion of these chemistries; the lowest errors occur for platinum-group \(4d/5d\) elements whose compounds are predominantly zero-gap metals. Second, the improvement from the virtual node and Huber loss is chemically broad rather than niche: relative to the ALIGNN baseline, the robust model lowers the per-element MAE for 58 of the 64 elements with at least 30 test structures (Figure~\ref{fig:physics-analysis}(a)), with the largest gains in \(5d\) and post-transition chemistry (Pt \(-0.040\)~eV, followed by La, Ir, Hg, Sb, I, and Bi) and only marginal degradations for five elements. Third, the error falls strongly with increasing crystal symmetry, from \(\approx0.30\)~eV in triclinic and monoclinic cells to 0.12--0.17~eV in hexagonal and cubic cells (the trend is not strictly monotonic---trigonal cells, for example, are harder than tetragonal ones---but the low-to-high-symmetry contrast is roughly a factor of two), and the Huber gain is largest precisely in the low-symmetry triclinic class (\(\approx-0.025\)~eV versus the baseline); low-symmetry cells are on average larger and chemically more diverse, which links this trend to the size-conditional global-token analysis of Section~\ref{sec:oversmoothing-discussion}.
 
-The band-gap-resolved view in Figure~\ref{fig:physics-analysis}(d) also exposes an honest trade-off of the robust objective. Metallic (zero-gap) structures are the easiest regime (\(\approx0.10\)~eV), while near-metallic gaps in \((0,0.5]\)~eV are the hardest (\(\approx0.40\)~eV)---exactly the regime in which the MP--HZW audit found the largest labelling ambiguity. Huber loss improves every bucket at or above 2~eV on both label sources but concedes a small amount of accuracy in the hardest near-metallic bucket, consistent with a robust loss down-weighting the heavy-tailed, ambiguously labelled samples concentrated near the metal/non-metal boundary.
+The band-gap-resolved view in Figure~\ref{fig:physics-analysis}(c) also exposes an honest trade-off of the robust objective. Metallic (zero-gap) structures are the easiest regime (\(\approx0.10\)~eV), while near-metallic gaps in \((0,0.5]\)~eV are the hardest (\(\approx0.40\)~eV)---exactly the regime in which the MP--HZW audit found the largest labelling ambiguity. Huber loss improves every bucket at or above 2~eV on both label sources but concedes a small amount of accuracy in the hardest near-metallic bucket, consistent with a robust loss down-weighting the heavy-tailed, ambiguously labelled samples concentrated near the metal/non-metal boundary.
 
 \begin{figure}[H]
 \centering
 \includegraphics[width=\textwidth]{fig5_physics_analysis.pdf}
-\caption{Physics-resolved error analysis of the robust model (T7, single virtual node + Huber). (a) Per-element test MAE on MP labels over the periodic table; a structure containing element \(X\) contributes to \(X\). Elements with fewer than 30 test structures are greyed. (b) Per-element MAE change from the ALIGNN baseline to T7; blue indicates improvement. (c) Test MAE by crystal system (ordered by increasing symmetry) for the baseline, virtual-node, and robust models on MP labels; per-class counts are given below the axis. (d) Test MAE by true-band-gap bucket for the same models; solid lines evaluate MP labels and dashed lines HZW labels.}
+\caption{Physics-resolved error analysis of the robust model (T7, single virtual node + Huber). (a) Per-element MAE change from the ALIGNN baseline to T7 on MP labels over the periodic table; a structure containing element \(X\) contributes to \(X\), blue indicates improvement, white indicates no change, elements with fewer than 30 test structures are greyed, and elements absent from the test split are left white. The corresponding absolute per-element MAE map is retained as Supplementary Figure~S2. (b) Test MAE by crystal system (ordered by increasing symmetry) for the baseline, virtual-node, and robust models on MP labels; per-class counts are given below the axis. (c) Test MAE by true-band-gap bucket for the same models; solid lines with filled markers evaluate MP labels and dashed lines with open markers evaluate HZW labels.}
 \label{fig:physics-analysis}
 \end{figure}
 
@@ -278,7 +278,7 @@ The band-gap-resolved view in Figure~\ref{fig:physics-analysis}(d) also exposes 
 
 The cleanest ablation is T4 versus T7. The architecture is the same single-virtual-node ALIGNN; only the final regression loss changes from MSE to the smooth-\(L_1\) Huber objective. On MP labels, MAE improves from 0.2325 to 0.2249; on HZW labels, from 0.2018 to 0.1940 (seed-42 values here and in Section~\ref{sec:decay-discussion}; three-seed means are given in Table~\ref{tab:main-results}). Both improvements are statistically significant under the paired bootstrap (both 95\% CIs exclude zero; Supplementary Table~S7). This is the strongest cross-source evidence in the project. It is consistent with the structure-first audit: even after removing zero/nonzero metal conflicts, the dataset still contains same-class numerical disagreement and heavy-tailed errors, so robust regression is useful. A complementary evaluation-side check supports the same reading: when the test set is partitioned by the strict label-consistency criteria (Supplementary Table~S10), all models are far more accurate on the label-consistent subset, and on MP labels both the virtual-node and Huber gains concentrate there (the virtual-node gain is \(-0.0081\ \ev\) on the consistent subset but essentially vanishes on the inconsistent complement), whereas on HZW labels the gains persist on both subsets. A strict \emph{training}-lens replication closes the loop: retraining the virtual-node model with the Huber loss directly on the strict-clean dataset (S14) improves the MAE from 0.2001 (its MSE counterpart S4) to 0.1936. This single strict-lens run reproduces a gain of the same size as the relaxed-lens T4\(\rightarrow\)T7 step, which argues against---though, being a single run, cannot definitively exclude---the possibility that the Huber improvement merely absorbs label noise that only the relaxed filter admits (Supplementary Information, strict-subset section).
 
-Figure~\ref{fig:mechanism-diagnostics}(a) summarizes the residual-quantile comparison. Huber reduces median and upper-quantile errors for both sources, supporting a robust-objective interpretation rather than a single-epoch artifact. The full training curves and residual histograms are retained in Supplementary Figure~S1.
+Figure~\ref{fig:mechanism-diagnostics}(a) summarizes the residual-quantile comparison. Huber reduces median and upper-quantile errors for both sources, supporting a robust-objective interpretation rather than a single-epoch artifact. The full training curves and residual histograms are retained in Supplementary Figure~S3.
 
 The converse of this result is equally informative: the mechanisms that add or select global capacity do not produce comparably stable gains. Top-\(k\) global aggregation provides no stable independent gain, since T8, the top-\(k\)-only model, is slightly better than T4 on MP labels but worse than T4 on HZW labels, while T6 and T9 both include Huber loss, so their gains cannot be attributed to top-\(k\) alone; we therefore treat top-\(k\) as an exploratory information-selection mechanism rather than a primary contribution, and we do not sweep its fraction parameter because it changes no conclusion. Raw capacity fares no better. Dual slots and attentive virtual nodes increase model capacity, but they also require the model to decide when extra global information is useful and what each slot should represent. Early HZW and strict-clean large-structure buckets show a real signal, in that large structures may benefit from more global capacity; medium-size structures, however, dominate the dataset and can be harmed by always-on additional global nodes. Without a reliable sample-level router or target-specific supervision, the extra capacity often learns source-specific noise rather than transferable structure-property information. Against this background, the value of the single plain virtual node is that it adds a global pathway without adding a decision the model has to get right.
 
@@ -287,7 +287,7 @@ The converse of this result is equally informative: the mechanisms that add or s
 
 The key cross-source question is why global broadcast decay works on one label source but not the other. Decay is an information-flow schedule rather than a universally stronger architecture: early epochs use strong global-to-node broadcasting, while late epochs reduce the scale. On MP labels, this reduces global-token over-correction; T10 lowers MAE from 0.2249 to 0.2237 and RMSE from 0.5035 to 0.4973. On HZW labels, the same schedule removes useful late-stage calibration; MAE worsens from 0.1940 to 0.1970 and RMSE from 0.4458 to 0.4536. We emphasize that both MAE differences are within paired-bootstrap noise and that neither direction is stable across the three training seeds (Section~\ref{sec:setup}); the robust reading is not that T10 is better or worse in MAE, but that in the seed-42 runs it shifts bias and RMSE in opposite directions on the two sources. Figure~\ref{fig:mechanism-diagnostics}(b) summarizes this divergence, and the complete residual table is provided in Supplementary Table~S4.
 
-Rather than leave the divergence at the level of interpretation, we provide three data-based diagnostics. First, a cross-label evaluation (Supplementary Table~S8) exploits the shared structure split: we score each trained model against \emph{both} label sets. The sign of the T10-minus-T7 gap follows the \emph{training} source and is invariant to the evaluation label---an MP-trained T10 beats MP-trained T7 even when both are scored on HZW labels, while an HZW-trained T10 is worse than HZW-trained T7 under either label. Decay's effect is therefore a training-dynamics phenomenon, not an evaluation-label artifact (seed-42 checkpoints; the four individual deltas each lie within the paired-bootstrap noise band, so the evidence is the consistent sign pattern rather than any single comparison). Second, the per-epoch validation trajectories (Supplementary Figure~S4) show that on HZW the T10-minus-T7 validation-MAE gap stays positive throughout the decay window and even grows late in training, whereas on MP it oscillates near zero; the harm tracks the shrinking broadcast scale. Third, a cohort analysis of the HZW structures most and least harmed by decay (Supplementary Table~S9) finds only weak chemical/structural separation: the decay-harmed cohort is modestly enriched in transition-metal-bearing compounds (\(+4.8\) percentage points, 95\% CI \([+0.1,+9.3]\)) and depleted in medium-symmetry and small-gap semiconductors, but no single family cleanly predicts the effect. We report this weak separation honestly rather than over-interpret it.
+Rather than leave the divergence at the level of interpretation, we provide three data-based diagnostics. First, a cross-label evaluation (Supplementary Table~S8) exploits the shared structure split: we score each trained model against \emph{both} label sets. The sign of the T10-minus-T7 gap follows the \emph{training} source and is invariant to the evaluation label---an MP-trained T10 beats MP-trained T7 even when both are scored on HZW labels, while an HZW-trained T10 is worse than HZW-trained T7 under either label. Decay's effect is therefore a training-dynamics phenomenon, not an evaluation-label artifact (seed-42 checkpoints; the four individual deltas each lie within the paired-bootstrap noise band, so the evidence is the consistent sign pattern rather than any single comparison). Second, the per-epoch validation trajectories (Supplementary Figure~S6) show that on HZW the T10-minus-T7 validation-MAE gap stays positive throughout the decay window and even grows late in training, whereas on MP it oscillates near zero; the harm tracks the shrinking broadcast scale. Third, a cohort analysis of the HZW structures most and least harmed by decay (Supplementary Table~S9) finds only weak chemical/structural separation: the decay-harmed cohort is modestly enriched in transition-metal-bearing compounds (\(+4.8\) percentage points, 95\% CI \([+0.1,+9.3]\)) and depleted in medium-symmetry and small-gap semiconductors, but no single family cleanly predicts the effect. We report this weak separation honestly rather than over-interpret it.
 
 Taken together, the practical conclusion is conservative and now evidence-backed: T10 is a training-source-specific refinement whose benefit does not transfer, while T7 remains the robust cross-source model.
 
@@ -324,7 +324,7 @@ HZW & T10 & -0.093 & +0.072 & -4.9 \\
 \begin{figure}[H]
 \centering
 \includegraphics[width=\textwidth]{fig4_mechanism_diagnostics.pdf}
-\caption{Robustness and representation diagnostics. (a) Absolute-error quantiles for MSE and Huber models. (b) T10--T7 changes under broadcast decay; negative values indicate improvement. (c,d) Final-layer embedding similarity and node-feature variance relative to T2 for structures with more than 80 atoms, computed on the full held-out test set.}
+\caption{Robustness and representation diagnostics. (a) Relative change in absolute-error quantiles when the MSE objective is replaced by Huber, as a percentage of the MSE value at each quantile; negative bars indicate that Huber is better, and the MSE absolute value under each tick anchors the scale. (b) T10--T7 changes under broadcast decay; negative values indicate improvement. (c,d) Final-layer embedding similarity and node-feature variance relative to T2 for structures with more than 80 atoms, computed on the full held-out test set.}
 \label{fig:mechanism-diagnostics}
 \end{figure}
 
@@ -437,6 +437,211 @@ Chi Chen, Weike Ye, Yunxing Zuo, Chen Zheng, and Shyue Ping Ong.
 Pedro Borlido, Thorsten Aull, Ahmad W. Huran, Fabien Tran, Miguel A. L. Marques, and Silvana Botti.
 \newblock Large-Scale Benchmark of Exchange--Correlation Functionals for the Determination of Electronic Band Gaps of Solids.
 \newblock \emph{Journal of Chemical Theory and Computation}, 15(9):5069--5079, 2019.
+
+\bibitem{battaglia2018relational}
+Peter W. Battaglia, Jessica B. Hamrick, Victor Bapst, Alvaro Sanchez-Gonzalez, Vinicius Zambaldi, Mateusz Malinowski, Andrea Tacchetti, David Raposo, Adam Santoro, Ryan Faulkner, and others.
+\newblock Relational inductive biases, deep learning, and graph networks.
+\newblock \emph{arXiv preprint arXiv:1806.01261}, 2018.
+
+\bibitem{southern2024understanding}
+Joshua Southern, Francesco Di Giovanni, Michael M. Bronstein, and Johannes F. Lutzeyer.
+\newblock Understanding Virtual Nodes: Oversquashing and Node Heterogeneity.
+\newblock In \emph{International Conference on Learning Representations (ICLR)}, 2025.
+
+\bibitem{alon2021bottleneck}
+Uri Alon and Eran Yahav.
+\newblock On the Bottleneck of Graph Neural Networks and its Practical Implications.
+\newblock In \emph{International Conference on Learning Representations (ICLR)}, 2021.
+
+\bibitem{topping2022understanding}
+Jake Topping, Francesco Di Giovanni, Benjamin Paul Chamberlain, Xiaowen Dong, and Michael M. Bronstein.
+\newblock Understanding over-squashing and bottlenecks on graphs via curvature.
+\newblock In \emph{International Conference on Learning Representations (ICLR)}, 2022.
+
+\bibitem{zhao2020pairnorm}
+Lingxiao Zhao and Leman Akoglu.
+\newblock PairNorm: Tackling Oversmoothing in GNNs.
+\newblock In \emph{International Conference on Learning Representations (ICLR)}, 2020.
+
+\bibitem{rong2020dropedge}
+Yu Rong, Wenbing Huang, Tingyang Xu, and Junzhou Huang.
+\newblock DropEdge: Towards Deep Graph Convolutional Networks on Node Classification.
+\newblock In \emph{International Conference on Learning Representations (ICLR)}, 2020.
+
+\bibitem{chen2020gcnii}
+Ming Chen, Zhewei Wei, Zengfeng Huang, Bolin Ding, and Yaliang Li.
+\newblock Simple and Deep Graph Convolutional Networks.
+\newblock In \emph{Proceedings of the 37th International Conference on Machine Learning (ICML)}, volume 119 of \emph{PMLR}, pages 1725--1735, 2020.
+
+\bibitem{xu2018jknet}
+Keyulu Xu, Chengtao Li, Yonglong Tian, Tomohiro Sonobe, Ken-ichi Kawarabayashi, and Stefanie Jegelka.
+\newblock Representation Learning on Graphs with Jumping Knowledge Networks.
+\newblock In \emph{Proceedings of the 35th International Conference on Machine Learning (ICML)}, volume 80 of \emph{PMLR}, pages 5453--5462, 2018.
+
+\bibitem{yan2024comformer}
+Keqiang Yan, Cong Fu, Xiaofeng Qian, Xiaoning Qian, and Shuiwang Ji.
+\newblock Complete and Efficient Graph Transformers for Crystal Material Property Prediction.
+\newblock In \emph{International Conference on Learning Representations (ICLR)}, 2024.
+
+\bibitem{deng2023chgnet}
+Bowen Deng, Peichen Zhong, KyuJung Jun, Janosh Riebesell, Kevin Han, Christopher J. Bartel, and Gerbrand Ceder.
+\newblock CHGNet as a pretrained universal neural network potential for charge-informed atomistic modelling.
+\newblock \emph{Nature Machine Intelligence}, 5(9):1031--1041, 2023.
+
+\bibitem{anselmi2024mgt}
+Marco Anselmi, Greg Slabaugh, Rachel Crespo-Otero, and Devis Di Tommaso.
+\newblock Molecular graph transformer: stepping beyond ALIGNN into long-range interactions.
+\newblock \emph{Digital Discovery}, 3(5):1048--1057, 2024.
+
+\bibitem{lin2023potnet}
+Yuchao Lin, Keqiang Yan, Youzhi Luo, Yi Liu, Xiaoning Qian, and Shuiwang Ji.
+\newblock Efficient Approximations of Complete Interatomic Potentials for Crystal Property Prediction.
+\newblock In \emph{Proceedings of the 40th International Conference on Machine Learning (ICML)}, volume 202 of \emph{PMLR}, pages 21260--21287, 2023.
+
+\bibitem{park2020icgcnn}
+Cheol Woo Park and Chris Wolverton.
+\newblock Developing an improved crystal graph convolutional neural network framework for accelerated materials discovery.
+\newblock \emph{Physical Review Materials}, 4(6):063801, 2020.
+
+\bibitem{gasteiger2020dimenet}
+Johannes Klicpera, Janek Gro{\ss}, and Stephan G\"unnemann.
+\newblock Directional Message Passing for Molecular Graphs.
+\newblock In \emph{International Conference on Learning Representations (ICLR)}, 2020.
+
+\bibitem{gasteiger2021gemnet}
+Johannes Gasteiger, Florian Becker, and Stephan G\"unnemann.
+\newblock GemNet: Universal Directional Graph Neural Networks for Molecules.
+\newblock In \emph{Advances in Neural Information Processing Systems (NeurIPS)}, volume 34, pages 6790--6802, 2021.
+
+\bibitem{batzner2022nequip}
+Simon Batzner, Albert Musaelian, Lixin Sun, Mario Geiger, Jonathan P. Mailoa, Mordechai Kornbluth, Nicola Molinari, Tess E. Smidt, and Boris Kozinsky.
+\newblock E(3)-equivariant graph neural networks for data-efficient and accurate interatomic potentials.
+\newblock \emph{Nature Communications}, 13:2453, 2022.
+
+\bibitem{batatia2022mace}
+Ilyes Batatia, D\'avid P\'eter Kov\'acs, Gregor N. C. Simm, Christoph Ortner, and G\'abor Cs\'anyi.
+\newblock MACE: Higher Order Equivariant Message Passing Neural Networks for Fast and Accurate Force Fields.
+\newblock In \emph{Advances in Neural Information Processing Systems (NeurIPS)}, volume 35, pages 11423--11436, 2022.
+
+\bibitem{schutt2021painn}
+Kristof Sch\"utt, Oliver Unke, and Michael Gastegger.
+\newblock Equivariant message passing for the prediction of tensorial properties and molecular spectra.
+\newblock In \emph{Proceedings of the 38th International Conference on Machine Learning (ICML)}, volume 139 of \emph{PMLR}, pages 9377--9388, 2021.
+
+\bibitem{girshick2015fast}
+Ross Girshick.
+\newblock Fast R-CNN.
+\newblock In \emph{Proceedings of the IEEE International Conference on Computer Vision (ICCV)}, pages 1440--1448, 2015.
+
+\bibitem{barron2019general}
+Jonathan T. Barron.
+\newblock A General and Adaptive Robust Loss Function.
+\newblock In \emph{Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition (CVPR)}, pages 4331--4339, 2019.
+
+\bibitem{meyer2021alternative}
+Gregory P. Meyer.
+\newblock An Alternative Probabilistic Interpretation of the Huber Loss.
+\newblock In \emph{Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition (CVPR)}, pages 5261--5269, 2021.
+
+\bibitem{efron1979bootstrap}
+Bradley Efron.
+\newblock Bootstrap Methods: Another Look at the Jackknife.
+\newblock \emph{The Annals of Statistics}, 7(1):1--26, 1979.
+
+\bibitem{efron1993introduction}
+Bradley Efron and Robert J. Tibshirani.
+\newblock \emph{An Introduction to the Bootstrap}.
+\newblock Chapman and Hall/CRC, 1993.
+
+\bibitem{demsar2006statistical}
+Janez Dem\v{s}ar.
+\newblock Statistical Comparisons of Classifiers over Multiple Data Sets.
+\newblock \emph{Journal of Machine Learning Research}, 7:1--30, 2006.
+
+\bibitem{loshchilov2019adamw}
+Ilya Loshchilov and Frank Hutter.
+\newblock Decoupled Weight Decay Regularization.
+\newblock In \emph{International Conference on Learning Representations (ICLR)}, 2019.
+
+\bibitem{smith2019superconvergence}
+Leslie N. Smith and Nicholay Topin.
+\newblock Super-convergence: very fast training of neural networks using large learning rates.
+\newblock In \emph{Artificial Intelligence and Machine Learning for Multi-Domain Operations Applications}, volume 11006 of \emph{Proceedings of SPIE}, article 1100612, 2019.
+
+\bibitem{kingma2015adam}
+Diederik P. Kingma and Jimmy Ba.
+\newblock Adam: A Method for Stochastic Optimization.
+\newblock In \emph{International Conference on Learning Representations (ICLR)}, 2015.
+
+\bibitem{ong2013pymatgen}
+Shyue Ping Ong, William Davidson Richards, Anubhav Jain, Geoffroy Hautier, Michael Kocher, Shreyas Cholia, Dan Gunter, Vincent L. Chevrier, Kristin A. Persson, and Gerbrand Ceder.
+\newblock Python Materials Genomics (pymatgen): A robust, open-source python library for materials analysis.
+\newblock \emph{Computational Materials Science}, 68:314--319, 2013.
+
+\bibitem{paszke2019pytorch}
+Adam Paszke, Sam Gross, Francisco Massa, Adam Lerer, James Bradbury, Gregory Chanan, Trevor Killeen, Zeming Lin, Natalia Gimelshein, Luca Antiga, and others.
+\newblock PyTorch: An Imperative Style, High-Performance Deep Learning Library.
+\newblock In \emph{Advances in Neural Information Processing Systems (NeurIPS)}, volume 32, pages 8024--8035, 2019.
+
+\bibitem{wang2019dgl}
+Minjie Wang, Da Zheng, Zihao Ye, Quan Gan, Mufei Li, Xiang Song, Jinjing Zhou, Chao Ma, Lingfan Yu, Yu Gai, Tianjun Xiao, Tong He, George Karypis, Jinyang Li, and Zheng Zhang.
+\newblock Deep Graph Library: A Graph-Centric, Highly-Performant Package for Graph Neural Networks.
+\newblock \emph{arXiv preprint arXiv:1909.01315}, 2019.
+
+\bibitem{choudhary2020jarvis}
+Kamal Choudhary, Kevin F. Garrity, Andrew C. E. Reid, Brian DeCost, Adam J. Biacchi, Angela R. Hight Walker, Zachary Trautt, Jason Hattrick-Simpers, A. Gilad Kusne, Andrea Centrone, Albert Davydov, Jie Jiang, Ruth Pachter, Gowoon Cheon, Evan Reed, Ankit Agrawal, Xiaofeng Qian, Vinit Sharma, Houlong Zhuang, Sergei V. Kalinin, Bobby G. Sumpter, Ghanshyam Pilania, Pinar Acar, Subhasish Mandal, Kristjan Haule, David Vanderbilt, Karin Rabe, and Francesca Tavazza.
+\newblock The joint automated repository for various integrated simulations (JARVIS) for data-driven materials design.
+\newblock \emph{npj Computational Materials}, 6:173, 2020.
+
+\bibitem{kirklin2015oqmd}
+Scott Kirklin, James E. Saal, Bryce Meredig, Alex Thompson, Jeff W. Doak, Muratahan Aykol, Stephan R\"uhl, and Chris Wolverton.
+\newblock The Open Quantum Materials Database (OQMD): assessing the accuracy of DFT formation energies.
+\newblock \emph{npj Computational Materials}, 1:15010, 2015.
+
+\bibitem{curtarolo2012aflow}
+Stefano Curtarolo, Wahyu Setyawan, Gus L. W. Hart, Michal Jahn\'atek, Roman V. Chepulskii, Richard H. Taylor, Shidong Wang, Junkai Xue, Kesong Yang, Ohad Levy, Michael J. Mehl, Harold T. Stokes, Denis O. Demchenko, and Dane Morgan.
+\newblock AFLOW: An automatic framework for high-throughput materials discovery.
+\newblock \emph{Computational Materials Science}, 58:218--226, 2012.
+
+\bibitem{perdew1985density}
+John P. Perdew.
+\newblock Density functional theory and the band gap problem.
+\newblock \emph{International Journal of Quantum Chemistry}, 28(S19):497--523, 1985.
+
+\bibitem{heyd2003hybrid}
+Jochen Heyd, Gustavo E. Scuseria, and Matthias Ernzerhof.
+\newblock Hybrid functionals based on a screened Coulomb potential.
+\newblock \emph{The Journal of Chemical Physics}, 118(18):8207--8215, 2003.
+
+\bibitem{kuisma2010kohn}
+M. Kuisma, J. Ojanen, J. Enkovaara, and T. T. Rantala.
+\newblock Kohn-Sham potential with discontinuity for band gap materials.
+\newblock \emph{Physical Review B}, 82(11):115106, 2010.
+
+\bibitem{zhuo2018predicting}
+Ya Zhuo, Aria Mansouri Tehrani, and Jakoah Brgoch.
+\newblock Predicting the Band Gaps of Inorganic Solids by Machine Learning.
+\newblock \emph{The Journal of Physical Chemistry Letters}, 9(7):1668--1673, 2018.
+
+\bibitem{ramakrishnan2015big}
+Raghunathan Ramakrishnan, Pavlo O. Dral, Matthias Rupp, and O. Anatole von Lilienfeld.
+\newblock Big Data Meets Quantum Chemistry Approximations: The \(\Delta\)-Machine Learning Approach.
+\newblock \emph{Journal of Chemical Theory and Computation}, 11(5):2087--2096, 2015.
+
+\bibitem{song2022learning}
+Hwanjun Song, Minseok Kim, Dongmin Park, Yooju Shin, and Jae-Gil Lee.
+\newblock Learning From Noisy Labels With Deep Neural Networks: A Survey.
+\newblock \emph{IEEE Transactions on Neural Networks and Learning Systems}, 34(11):8135--8153, 2023.
+
+\bibitem{northcutt2021pervasive}
+Curtis G. Northcutt, Anish Athalye, and Jonas Mueller.
+\newblock Pervasive Label Errors in Test Sets Destabilize Machine Learning Benchmarks.
+\newblock In \emph{Proceedings of the Neural Information Processing Systems Track on Datasets and Benchmarks}, volume 1, 2021.
+
+\bibitem{kingsbury2022performance}
+Ryan Kingsbury, Ayush S. Gupta, Christopher J. Bartel, Jason M. Munro, Shyam Dwaraknath, Matthew Horton, and Kristin A. Persson.
+\newblock Performance Comparison of r\(^2\)SCAN and SCAN metaGGA Density Functionals for Solid Materials via an Automated, High-Throughput Computational Workflow.
+\newblock \emph{Physical Review Materials}, 6(1):013801, 2022.
 
 \end{thebibliography}
 

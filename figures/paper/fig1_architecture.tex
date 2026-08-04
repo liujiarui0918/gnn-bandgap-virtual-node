@@ -7,80 +7,93 @@
   output/.style={module, fill=green!6, draw=green!55!black},
   flow/.style={->, line width=0.55pt, draw=black!68, shorten >=1.2pt, shorten <=0.8pt},
   exchange/.style={->, line width=0.45pt, draw=orange!76!black, shorten >=1pt, shorten <=0.7pt},
+  decaypath/.style={->, line width=0.45pt, draw=violet!70!black, dashed, dash pattern=on 1.6pt off 1.2pt, shorten >=1pt, shorten <=0.7pt},
   atom/.style={circle, draw=blue!65, fill=blue!18, line width=0.35pt, inner sep=0pt, minimum size=0.18cm},
+  dim/.style={font=\tiny, text=black!58},
   every node/.style={font=\scriptsize}
 ]
 
-\path[use as bounding box] (0,0) rectangle (18.0,4.18);
+\path[use as bounding box] (0,0) rectangle (18.0,5.35);
 
 % Fixed stage gutters keep boxes and arrows separated after column-width scaling.
-\node[font=\bfseries\small] at (1.82,4.0) {(a) Graph construction};
-\node[font=\bfseries\small] at (5.75,4.0) {(b) Local encoder};
-\node[font=\bfseries\small] at (9.98,4.0) {(c) Global exchange};
-\node[font=\bfseries\small] at (15.08,4.0) {(d) Prediction};
-\draw[black!18, line width=0.4pt] (3.70,0.24) -- (3.70,3.72);
-\draw[black!18, line width=0.4pt] (7.80,0.24) -- (7.80,3.72);
-\draw[black!18, line width=0.4pt] (12.15,0.24) -- (12.15,3.72);
+\node[font=\bfseries\small] at (1.82,5.14) {(a) Graph construction};
+\node[font=\bfseries\small] at (5.75,5.14) {(b) Local encoder};
+\node[font=\bfseries\small] at (9.98,5.14) {(c) Global exchange};
+\node[font=\bfseries\small] at (15.08,5.14) {(d) Prediction};
+\draw[black!18, line width=0.4pt] (3.70,0.24) -- (3.70,4.86);
+\draw[black!18, line width=0.4pt] (7.80,0.24) -- (7.80,4.86);
+\draw[black!18, line width=0.4pt] (12.15,0.24) -- (12.15,4.86);
 
 % (a) Periodic crystal and graph construction.
-\draw[blue!58, line width=0.65pt] (0.18,1.86) -- (1.26,1.86) -- (1.70,2.40) -- (0.62,2.40) -- cycle;
-\foreach \x/\y in {0.41/2.03,0.91/2.04,1.39/2.52,0.73/2.27,1.19/2.25} {\node[atom] at (\x,\y) {};}
-\draw[black!28, line width=0.35pt] (0.41,2.03) -- (0.73,2.27) -- (1.19,2.25) -- (0.91,2.04) -- cycle;
-\node[align=center] at (0.94,1.36) {periodic crystal\\\(\mathcal C=\{Z_i,\mathbf r_i,\mathbf A\}\)};
-\node[local, text width=0.98cm, minimum width=1.30cm] (graphg) at (2.77,2.67) {atom graph\\\(G\)};
-\node[local, text width=0.98cm, minimum width=1.30cm] (graphl) at (2.77,1.55) {line graph\\\(L(G)\)};
-\draw[flow] (1.55,2.34) -- (graphg.west);
-\draw[flow] (1.48,1.94) -- (graphl.west);
-\coordinate (graphmerge) at (3.50,2.25);
+\draw[blue!58, line width=0.65pt] (0.18,2.16) -- (1.26,2.16) -- (1.70,2.70) -- (0.62,2.70) -- cycle;
+\foreach \x/\y in {0.41/2.33,0.91/2.34,1.39/2.82,0.73/2.57,1.19/2.55} {\node[atom] at (\x,\y) {};}
+\draw[black!28, line width=0.35pt] (0.41,2.33) -- (0.73,2.57) -- (1.19,2.55) -- (0.91,2.34) -- cycle;
+\node[align=center] at (0.94,1.46) {periodic crystal\\\(\mathcal C=\{Z_i,\mathbf r_i,\mathbf A\}\)};
+\node[local, text width=0.98cm, minimum width=1.30cm] (graphg) at (2.77,3.18) {atom graph\\\(G\)};
+\node[local, text width=0.98cm, minimum width=1.30cm] (graphl) at (2.77,1.80) {line graph\\\(L(G)\)};
+\draw[flow] (1.55,2.64) -- (graphg.west);
+\draw[flow] (1.70,2.16) -- (graphl.west);
+\node[dim, anchor=north] at (2.77,2.50) {\(92\)-d atom feat.};
+\node[dim, anchor=north] at (2.77,1.16) {\(80\)-d bond, \(40\)-d angle};
+\coordinate (graphmerge) at (3.50,2.60);
 \draw[draw=black!45, line width=0.4pt] (graphg.east) -- (graphmerge);
 \draw[draw=black!45, line width=0.4pt] (graphl.east) -- (graphmerge);
 \fill[black!55] (graphmerge) circle (0.025cm);
-\node[align=center, text=black!68] at (2.15,0.53) {periodic neighbors\\bonds and angles};
+\node[align=center, text=black!68] at (2.15,0.42) {periodic neighbors\\bonds and angles};
 
 % (b) A single coupled ALIGNN block; feature states label the arrows instead of extra boxes.
-\node[local, text width=1.70cm, minimum width=2.08cm, minimum height=1.34cm] (alignn) at (5.55,2.25) {ALIGNN layer\\[1pt]\(L(G):\ \theta\!\rightarrow\!e\)\\\(G:\ e\!\rightarrow\!h\)};
+\node[local, text width=1.70cm, minimum width=2.08cm, minimum height=1.34cm] (alignn) at (5.55,2.60) {ALIGNN layer\\[1pt]\(L(G):\ \theta\!\rightarrow\!e\)\\\(G:\ e\!\rightarrow\!h\)};
 \draw[flow] (graphmerge) -- (alignn.west);
-\node[fill=white, inner sep=1pt] at (4.08,2.45) {\(\mathbf H^0,\mathbf E^0\)};
-\node[anchor=south east] at (6.57,2.98) {\(\times L\)};
+\node[fill=white, inner sep=1pt] at (4.08,2.80) {\(\mathbf H^0,\mathbf E^0\)};
+\node[anchor=south west] at (6.67,3.29) {\(\times L\)};
+\node[dim, anchor=south, align=center] at (5.45,3.42) {\(4\) ALIGNN \(+\) \(4\) gated conv.\\\(d=256\)};
 \node[align=center, text=black!68] at (5.75,0.53) {local geometric message passing};
 
 % (c) A virtual node pools atom states and broadcasts graph context.
-\node[atom] (h1) at (8.35,1.55) {};
-\node[atom] (h2) at (9.00,1.78) {};
-\node[atom] (h3) at (9.65,1.55) {};
-\node[atom] (h4) at (10.30,1.78) {};
-\node[atom] (h5) at (10.95,1.55) {};
+\node[atom] (h1) at (8.35,1.45) {};
+\node[atom] (h2) at (9.00,1.70) {};
+\node[atom] (h3) at (9.65,1.45) {};
+\node[atom] (h4) at (10.30,1.70) {};
+\node[atom] (h5) at (10.95,1.45) {};
 \draw[black!25, line width=0.35pt] (h1) -- (h2) -- (h3) -- (h4) -- (h5);
-\node[global, text width=1.15cm, minimum width=1.48cm] (gtoken) at (9.65,2.93) {global token\\\(\mathbf g^l\)};
+\node[global, text width=1.15cm, minimum width=1.48cm] (gtoken) at (9.65,3.45) {global token\\\(\mathbf g^l\)};
 \draw[exchange] (h1.north) -- (gtoken.south west);
 \draw[exchange] (h3.north) -- (gtoken.south);
 \draw[exchange] (h5.north) -- (gtoken.south east);
 \draw[exchange] (gtoken.south west) -- (h2.north);
 \draw[exchange] (gtoken.south east) -- (h4.north);
-\node[anchor=east, fill=white, inner sep=1pt] at (9.12,2.47) {pool};
-\node[anchor=west, fill=white, inner sep=1pt] at (10.18,2.47) {broadcast};
-\draw[flow] (alignn.east) -- (7.58,2.25) -| (h1.north);
-\node[fill=white, inner sep=1pt] at (7.16,2.45) {\(\mathbf H^L\)};
-\node[align=center] at (9.65,0.70) {\(\mathbf g^l=\tfrac{1}{n}\sum_i \mathbf h_i^l\)\\\(\mathbf h_i^{l+1}\!\leftarrow\!\mathbf h_i^{l+1}+\gamma_t\,\mathbf g^l\)};
+\node[anchor=east, fill=white, inner sep=1pt] at (9.05,2.32) {pool};
+\node[anchor=west, fill=white, inner sep=1pt] at (10.25,2.32) {broadcast};
+\draw[flow] (alignn.east) -- (7.58,2.60) -| (h1.north);
+\node[fill=white, inner sep=1pt] at (7.08,2.80) {\(\mathbf H^L\)};
+\node[dim, anchor=west] at (8.28,4.48) {\(\mathbf g^l\in\mathbb R^{256}\)};
+\node[dim, anchor=west] at (8.28,4.20) {\(8\) exchanges};
+% The decay coefficient is an optional variant, not part of the recommended
+% model, so it is drawn as a detached dashed branch rather than inline.
+\node[module, draw=violet!62!black, fill=violet!5, text width=1.30cm, minimum width=1.64cm, font=\tiny, align=center] (decay) at (11.16,4.15) {T10 only:\\decay \(\gamma_t{:}\,1\!\rightarrow\!0.25\)};
+\draw[decaypath] (decay.south) -- (gtoken.east);
+\node[align=center] at (9.65,0.66) {\(\mathbf g^l=\tfrac{1}{n}\sum_i \mathbf h_i^l\)\\\(\mathbf h_i^{l+1}\!\leftarrow\!\mathbf h_i^{l+1}+\gamma_t\,\mathbf g^l\)\\\(\gamma_t\!\equiv\!1\) in T4/T7};
 
 % The global and local streams merge before the prediction head.
-\coordinate (joint) at (11.78,2.20);
+\coordinate (joint) at (11.78,2.45);
 \draw[draw=black!48, line width=0.4pt] (gtoken.east) -- (joint);
 \draw[draw=black!48, line width=0.4pt] (h5.east) -- (joint);
 \fill[black!55] (joint) circle (0.025cm);
 
 % (d) Readout modules use fixed widths and explicit gaps.
-\node[output, text width=1.40cm, minimum width=1.76cm] (readout) at (13.35,2.67) {local--global\\readout};
-\node[output, minimum width=0.88cm] (mlp) at (15.20,2.67) {MLP};
-\node[output, minimum width=1.02cm] (pred) at (16.75,2.67) {\(\widehat E_g\)};
-\node at (13.35,2.06) {\([\operatorname{mean}_i\mathbf h_i^L\|\mathbf g^L]\)};
-\node[module, minimum width=1.10cm] (target) at (13.35,1.13) {target \(E_g\)};
-\node[global, text width=2.10cm, minimum width=2.46cm] (loss) at (15.65,1.13) {Huber\((\widehat E_g-E_g;\beta)\)};
+\node[output, text width=1.40cm, minimum width=1.76cm] (readout) at (13.35,2.90) {local--global\\readout};
+\node[output, minimum width=0.88cm] (mlp) at (15.20,2.90) {MLP};
+\node[output, minimum width=1.02cm] (pred) at (16.75,2.90) {\(\widehat E_g\)};
+\node at (13.35,2.28) {\([\operatorname{mean}_i\mathbf h_i^L\|\mathbf g^L]\)};
+\node[dim, anchor=north] at (13.35,2.00) {\(512\)-d \(\rightarrow\) \(1\)};
+\node[module, minimum width=1.10cm] (target) at (13.35,1.36) {target \(E_g\)};
+\node[global, text width=2.10cm, minimum width=2.46cm] (loss) at (15.65,1.36) {Huber\((\widehat E_g-E_g;\beta)\)};
+\node[dim, anchor=north] at (15.65,0.86) {\(\beta=0.5\) eV};
 \draw[flow] (joint) -- (readout.west);
 \draw[flow] (readout.east) -- (mlp.west);
 \draw[flow] (mlp.east) -- (pred.west);
 \draw[flow] (pred.south) -- ([xshift=1.10cm]loss.north);
 \draw[flow] (target.east) -- (loss.west);
-\node[align=center, text=black!68] at (15.10,0.43) {band-gap regression};
+\node[align=center, text=black!68] at (15.10,0.36) {band-gap regression};
 
 \end{tikzpicture}

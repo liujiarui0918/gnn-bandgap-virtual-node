@@ -33,11 +33,19 @@ plt.rcParams.update(
     }
 )
 
-BLUE = "#2D5F8B"
-TEAL = "#3A8D8F"
-ORANGE = "#D9772A"
+# Okabe-Ito colour-blind-safe palette. The fixed categorical roles are
+# T2 = BLUE, T4 = TEAL, T7 = ORANGE, T10 = PURPLE, and MP = BLUE / HZW = ORANGE
+# for the two-source grouped bars; the same roles are used in
+# build_physics_figures.py and build_statistics_figure.py. GREEN is reserved for
+# the "kept / final" semantics of the audit ledger and never shares a panel with
+# TEAL, so no panel contains two greens.
+BLUE = "#0072B2"
+TEAL = "#009E73"
+ORANGE = "#E69F00"
+PURPLE = "#CC79A7"
+SKY = "#56B4E9"
 GREEN = "#4C8C5A"
-RED = "#B84A4A"
+RED = "#D55E00"
 INK = "#222222"
 MUTED = "#6B7280"
 
@@ -141,7 +149,7 @@ def build_data_audit() -> None:
     # matching (top) then conflict breakdown within the matched set.
     audit = [
         ("Entered audit", 95462, BLUE),
-        ("Structure matched", 92787, TEAL),
+        ("Structure matched", 92787, SKY),
         ("No MP counterpart", 2636, MUTED),
         ("Structure unmatched", 39, MUTED),
         ("MP metal / HZW nonmetal", 3142, RED),
@@ -151,19 +159,23 @@ def build_data_audit() -> None:
     ]
 
     # Panel (b): T-series filtering waterfall, then the train/val/test split.
+    # The final surviving population is drawn in the emphasis colour so the
+    # endpoint of the ledger is findable without reading the caption.
     filt = [
-        ("Structure matched", 92787, TEAL),
+        ("Structure matched", 92787, SKY),
         ("Gap-conflict removed", 84803, ORANGE),
         ("Equal-atom subset", 84551, GREEN),
-        ("Export-safe final", 84550, GREEN),
+        ("Export-safe final\n(T-series population)", 84550, BLUE),
     ]
     filt_notes = ["", "$-$7,984", "$-$252", "$-$1"]
     split = {"Train": 67640, "Validation": 8455, "Test": 8455}
 
+    # Roughly 2:1 rather than the previous 3:1; at \textwidth the old aspect
+    # squeezed every label into a 2 cm-tall strip.
     fig, axes = plt.subplots(
         1,
         2,
-        figsize=(11.4, 4.2),
+        figsize=(10.0, 5.0),
         gridspec_kw={"width_ratios": [1.15, 1.0]},
     )
 
@@ -191,7 +203,7 @@ def build_data_audit() -> None:
         transform=ax.transAxes,
         ha="right",
         va="center",
-        fontsize=6.3,
+        fontsize=7,
         color=MUTED,
     )
     ax.grid(axis="x", alpha=0.2)
@@ -220,14 +232,14 @@ def build_data_audit() -> None:
         transform=ax.transAxes,
         ha="left",
         va="top",
-        fontsize=6.3,
+        fontsize=7,
         color=MUTED,
         clip_on=False,
     )
     ax.grid(axis="x", alpha=0.2)
     panel_label(ax, "(b)")
 
-    fig.subplots_adjust(wspace=0.62, bottom=0.22, top=0.86, left=0.16, right=0.98)
+    fig.subplots_adjust(wspace=0.62, bottom=0.26, top=0.84, left=0.16, right=0.98)
     save(fig, "fig2_data_audit")
 
 
@@ -237,7 +249,7 @@ def build_main_results() -> None:
     seeds = load_multiseed()
     core = ["T1", "T2", "T3", "T4", "T7", "T10"]
     labels = AXIS_LABELS
-    bar_colors = [MUTED, BLUE, MUTED, TEAL, ORANGE, GREEN]
+    bar_colors = [MUTED, BLUE, MUTED, TEAL, ORANGE, PURPLE]
 
     fig, axes = plt.subplots(
         2,
@@ -249,6 +261,10 @@ def build_main_results() -> None:
     # --- Row 1 (a)(b): per-source MAE bars (canonical seed-42 run) with
     # multi-seed error bars (+/- 1 s.d. from multiseed_summary.csv). Bar values
     # stay on the comparison_summary pipeline; only the error bars are new.
+    # The T2->T4->T7->T10 differences are ~0.008 eV on a 0.24 eV axis, so each
+    # panel carries a zoom inset over the four ALIGNN variants; the inset is
+    # placed in the empty lower-right region left by their short bars.
+    zoom_models = ["T2", "T4", "T7", "T10"]
     for ax, df, source, title, letter in [
         (axes[0, 0], mp, "mp", "MP labels", "(a)"),
         (axes[0, 1], hzw, "hzw", "HZW labels", "(b)"),
@@ -278,16 +294,48 @@ def build_main_results() -> None:
             ax.text(value + err + 0.005, yi, f"{value:.3f}", va="center", fontsize=8)
         ax.text(
             0.98,
-            0.03,
+            0.995,
             f"error bars: $\\pm$1 s.d. over {'/'.join(str(n) for n in n_seeds)} seeds",
             transform=ax.transAxes,
             ha="right",
-            va="bottom",
-            fontsize=6.5,
+            va="top",
+            fontsize=7,
             color=MUTED,
         )
         ax.grid(axis="x", alpha=0.2)
         panel_label(ax, letter)
+
+        zvalues = [df.loc[x, "mae"] for x in zoom_models]
+        zerrs = [seeds.loc[(source, x), "mae_std"] for x in zoom_models]
+        zcolors = [BLUE, TEAL, ORANGE, PURPLE]
+        zy = np.arange(len(zoom_models))
+        span = max(zvalues) - min(zvalues)
+        zlow = min(zvalues) - max(zerrs) - 0.22 * span
+        zhigh = max(zvalues) + max(zerrs) + 0.55 * span
+        axin = ax.inset_axes([0.50, 0.05, 0.48, 0.46])
+        axin.barh(zy, zvalues, color=zcolors, height=0.60)
+        axin.errorbar(
+            zvalues, zy, xerr=zerrs, fmt="none", ecolor=INK,
+            elinewidth=0.8, capsize=2.0, capthick=0.8,
+        )
+        axin.set_yticks(zy, zoom_models)
+        axin.invert_yaxis()
+        axin.set_xlim(zlow, zhigh)
+        axin.tick_params(labelsize=6)
+        axin.set_xticks([round(v, 3) for v in np.linspace(zlow, zhigh, 3)])
+        for spine in axin.spines.values():
+            spine.set_linewidth(0.6)
+            spine.set_visible(True)
+        axin.set_facecolor("#FBFBFB")
+        axin.grid(axis="x", alpha=0.18)
+        axin.set_title(
+            "zoom: ALIGNN variants\n(x-axis does not start at 0)",
+            fontsize=6.2,
+            color=MUTED,
+            pad=2.0,
+        )
+        for yi, value in zip(zy, zvalues):
+            axin.text(value, yi, f" {value:.4f}", va="center", ha="left", fontsize=5.8)
 
     comparisons = ["ALIGNN$\\to$+VN\n(global token)", "+VN$\\to$+Huber\n(robust loss)", "+Huber$\\to$+decay\n(broadcast)"]
     gains = {
@@ -322,7 +370,7 @@ def build_main_results() -> None:
         transform=ax.transAxes,
         ha="center",
         va="top",
-        fontsize=6.8,
+        fontsize=7,
         color=MUTED,
     )
     ax.legend(frameon=False, loc="lower left")
@@ -337,6 +385,10 @@ def build_main_results() -> None:
     ax.set_ylim(-0.0045, 0.014)
 
     # --- Row 2 (d)(e): T7 parity density (test split, log-count hexbin).
+    # Both panels share one colour normalisation and one colorbar, so the two
+    # sources' densities can be compared cell-for-cell rather than each panel
+    # being auto-scaled to its own maximum.
+    hexbins = []
     for ax, dataset, summary, title, letter in [
         (axes[1, 0], "mp", mp, "ALIGNN+VN+Huber, MP labels", "(d)"),
         (axes[1, 1], "hzw", hzw, "ALIGNN+VN+Huber, HZW labels", "(e)"),
@@ -363,6 +415,7 @@ def build_main_results() -> None:
             mincnt=1,
             linewidths=0.1,
         )
+        hexbins.append(hb)
         ax.plot([0, 10], [0, 10], color=INK, linestyle="--", linewidth=0.8, alpha=0.7)
         ax.set_xlim(0, 10)
         ax.set_ylim(0, 10)
@@ -379,28 +432,34 @@ def build_main_results() -> None:
             va="top",
             fontsize=7.5,
         )
-        cb = fig.colorbar(hb, ax=ax, pad=0.02, shrink=0.9)
-        cb.set_label("Count", fontsize=8)
-        cb.ax.tick_params(labelsize=7)
         panel_label(ax, letter)
 
-    # --- (f): residual histograms, MSE vs Huber virtual-node variants (MP).
+    shared_max = max(hb.get_array().max() for hb in hexbins)
+    for hb in hexbins:
+        hb.set_norm(LogNorm(vmin=1, vmax=shared_max))
+    print(f"[sanity] fig3(d,e) shared hexbin colour scale: 1 to {int(shared_max)} counts/cell")
+
+    # --- (f): residual distributions, MSE vs Huber virtual-node variants (MP).
+    # Reviewer-facing change: the two filled semi-transparent histograms were
+    # indistinguishable where they overlap, which is exactly the region the
+    # panel is about. Step outlines with different line styles plus a log count
+    # axis separate the two curves and expose the tails that motivate Huber.
     ax = axes[1, 2]
     bins = np.linspace(-1.5, 1.5, 76)
-    for tcode, color, label in [
-        ("T4", TEAL, "ALIGNN+VN (MSE)"),
-        ("T7", ORANGE, "ALIGNN+VN+Huber"),
+    for tcode, color, linestyle, label in [
+        ("T4", TEAL, "-", "ALIGNN+VN (MSE)"),
+        ("T7", ORANGE, "--", "ALIGNN+VN+Huber"),
     ]:
         pred = load_test_predictions("mp", tcode)
         resid = pred["prediction"] - pred["target"]
         ax.hist(
             resid,
             bins=bins,
+            histtype="step",
             color=color,
-            alpha=0.55,
+            linestyle=linestyle,
+            linewidth=1.6,
             label=label,
-            edgecolor=color,
-            linewidth=0.5,
         )
         n_shown = ((resid >= -1.5) & (resid <= 1.5)).sum()
         print(
@@ -409,15 +468,24 @@ def build_main_results() -> None:
         )
     ax.axvline(0, color=INK, linewidth=0.8, alpha=0.6)
     ax.set_xlim(-1.5, 1.5)
+    ax.set_yscale("log")
     ax.set_box_aspect(1)
     ax.set_xlabel("Prediction $-$ target (eV)")
-    ax.set_ylabel("Test-set count")
+    ax.set_ylabel("Test-set count (log scale)")
     ax.set_title("Residual distribution, MP labels")
     ax.legend(frameon=False, loc="upper right", fontsize=7.5)
     ax.grid(axis="y", alpha=0.2)
     panel_label(ax, "(f)")
 
     fig.subplots_adjust(wspace=0.46, hspace=0.42, bottom=0.09, top=0.94)
+    # One colorbar for (d) and (e), added after the layout is fixed so it does
+    # not steal width from either parity panel.
+    box_d = axes[1, 0].get_position()
+    box_e = axes[1, 1].get_position()
+    cax = fig.add_axes([box_e.x1 + 0.012, box_e.y0 + 0.02, 0.010, (box_d.y1 - box_d.y0) * 0.80])
+    cb = fig.colorbar(hexbins[-1], cax=cax)
+    cb.set_label("Count per hexagon (shared scale)", fontsize=7.5)
+    cb.ax.tick_params(labelsize=7)
     save(fig, "fig3_main_results")
 
 
@@ -434,27 +502,68 @@ def build_mechanism_diagnostics() -> None:
     quantiles = ["median_abs_error", "p90_abs_error", "p95_abs_error", "p99_abs_error"]
     qlabels = ["Median", "P90", "P95", "P99"]
     x = np.arange(len(quantiles))
-    styles = [
-        ("MP label", "T4 MSE", BLUE, "-", "o"),
-        ("MP label", "T7 Huber", ORANGE, "-", "s"),
-        ("HZW label", "T4 MSE", TEAL, "--", "o"),
-        ("HZW label", "T7 Huber", GREEN, "--", "s"),
-    ]
-    for dataset, experiment, color, linestyle, marker in styles:
-        row = summary[(summary["dataset"] == dataset) & (summary["experiment"] == experiment)].iloc[0]
-        ax.plot(
-            x,
-            [row[q] for q in quantiles],
-            marker=marker,
-            linestyle=linestyle,
-            color=color,
-            linewidth=1.5,
-            label=f"{dataset.split()[0]} {experiment.split()[1]}",
+
+    # Reviewer-facing change: the previous version plotted the four raw
+    # quantile curves on one linear axis. P99 (~2.2 eV) is an order of magnitude
+    # above the median (~0.07 eV), so the whole lower half of the axis -- which
+    # is where the Huber effect lives -- collapsed onto the zero line and the
+    # MSE/Huber pairs were visually identical. The panel now plots the paired
+    # difference (Huber - MSE) at each quantile as a percentage of the MSE
+    # value, with a zero reference line, so the actual claim ("Huber lowers the
+    # typical error but concedes nothing meaningful in the extreme tail") is
+    # legible. Absolute eV values for both models are printed above each pair
+    # so no information from the old panel is lost.
+    def quantile_row(dataset: str, experiment: str) -> pd.Series:
+        return summary[
+            (summary["dataset"] == dataset) & (summary["experiment"] == experiment)
+        ].iloc[0]
+
+    width = 0.36
+    for offset, (dataset, color, tag) in enumerate(
+        [("MP label", BLUE, "MP"), ("HZW label", ORANGE, "HZW")]
+    ):
+        mse = quantile_row(dataset, "T4 MSE")
+        hub = quantile_row(dataset, "T7 Huber")
+        rel = [100.0 * (hub[q] - mse[q]) / mse[q] for q in quantiles]
+        xpos = x + (offset - 0.5) * width
+        ax.bar(xpos, rel, width, color=color, label=f"{tag} labels")
+        for xi, value, q in zip(xpos, rel, quantiles):
+            ax.text(
+                xi,
+                value + (0.28 if value >= 0 else -0.28),
+                f"{value:+.1f}%",
+                ha="center",
+                va="bottom" if value >= 0 else "top",
+                fontsize=6.4,
+            )
+        print(
+            f"[sanity] fig4(a) {tag} Huber-vs-MSE relative change: "
+            + ", ".join(f"{lab} {v:+.2f}%" for lab, v in zip(qlabels, rel))
         )
-    ax.set_xticks(x, qlabels)
-    ax.set_ylabel("Absolute error (eV)")
+
+    ax.axhline(0, color=INK, linewidth=0.9)
+    ax.set_xticks(
+        x,
+        [
+            f"{lab}\n{quantile_row('MP label', 'T4 MSE')[q]:.2f} eV"
+            for lab, q in zip(qlabels, quantiles)
+        ],
+        fontsize=7.5,
+    )
+    ax.set_ylabel("Huber $-$ MSE, relative (%)")
     ax.set_title("Robust loss reduces typical error")
-    ax.legend(frameon=False, ncol=2, loc="upper left")
+    ax.text(
+        0.5,
+        0.99,
+        "negative = Huber better; MSE absolute value (MP) under each tick",
+        transform=ax.transAxes,
+        ha="center",
+        va="top",
+        fontsize=6.6,
+        color=MUTED,
+    )
+    ax.margins(y=0.22)
+    ax.legend(frameon=False, ncol=2, loc="lower left", fontsize=7.5)
     ax.grid(axis="y", alpha=0.2)
     panel_label(ax, "(a)")
 

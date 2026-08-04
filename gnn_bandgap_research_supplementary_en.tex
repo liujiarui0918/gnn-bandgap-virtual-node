@@ -8,9 +8,10 @@
 \usepackage{tabularx}
 \usepackage{longtable}
 \usepackage{array}
+\usepackage[section]{placeins}
 \usepackage[hidelinks]{hyperref}
 
-\graphicspath{{figures/huber_diagnostics/}{figures/story_slides/}{figures/decay_dynamics/}{results/analysis/oversmoothing_hooks_mp/}{results/analysis/oversmoothing_hooks_hzw/}}
+\graphicspath{{figures/huber_diagnostics/}{figures/story_slides/}{figures/decay_dynamics/}{figures/paper/}{results/analysis/oversmoothing_hooks_mp/}{results/analysis/oversmoothing_hooks_hzw/}}
 \newcolumntype{Y}{>{\raggedright\arraybackslash}X}
 \renewcommand{\arraystretch}{1.10}
 \renewcommand{\thesection}{S\arabic{section}}
@@ -23,6 +24,30 @@
 
 \begin{document}
 \maketitle
+
+\section{Structure-first MP--HZW data audit figure}
+\label{sec:si-data-audit}
+
+This figure was moved out of the main text, which now opens with the model architecture; the audit numbers themselves remain in the main text as Table~1. Panel (a) reports the audit conflict statistics under the audit thresholds (metal-like \(\le 0.05\ \mathrm{eV}\) or a metallic flag; non-metal \(\ge 0.10\ \mathrm{eV}\); same-class numerical disagreement \(>1\ \mathrm{eV}\)). Panel (b) is the actual T-series filtering waterfall under the stricter export zero-gap threshold (\(\le 10^{-6}\ \mathrm{eV}\)), ending at the 84,550 equal-atom structures whose identical split is evaluated with both MP and HZW labels. The two panels use different, purpose-specific thresholds and are self-contained; they must not be combined row-wise.
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=\textwidth]{fig2_data_audit.pdf}
+\caption{Structure-first data construction, shown as two self-contained ledgers. (a) Audit conflict statistics under the audit thresholds. (b) The T-series filtering waterfall, ending at 84,550 structures.}
+\label{fig:si-data-audit}
+\end{figure}
+
+\section{Absolute per-element error map}
+\label{sec:si-element-mae}
+
+This absolute per-element MAE map previously occupied panel (a) of the physics-analysis figure in the main text. It is retained here because at main-text width two periodic tables side by side left each cell too small to read, and the absolute map is descriptive context: the evidence for the claim that the virtual-node and Huber gains are chemically broad is the change map, which is the one shown in the main text. As in the main text, a structure containing element \(X\) contributes its absolute error to \(X\); elements with fewer than 30 test structures are greyed, and elements absent from the test split are left white.
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.9\textwidth]{figS5_element_mae_absolute.pdf}
+\caption{Absolute per-element test MAE of the robust model (T7, ALIGNN + virtual node + Huber) on MP labels, seed-42 run, over the periodic table.}
+\label{fig:si-element-mae}
+\end{figure}
 
 \section{Exploratory HZW experiments}
 
@@ -127,6 +152,8 @@ HZW & T10 decay + Huber & 0.197033 & 0.453592 & 0.010850 & 0.060386 & 0.507704 &
 
 \section{Optimization and residual figures}
 
+Figure~\ref{fig:optimization} collects the optimization and robust-loss diagnostics behind the T4/T7/T10 comparison, and Figure~\ref{fig:decay-buckets} shows the bucket-level MAE change when broadcast decay is added on top of the Huber recipe (T10 versus T7).
+
 \begin{figure}[htbp]
 \centering
 \begin{minipage}[t]{0.49\textwidth}
@@ -162,6 +189,8 @@ HZW & T10 decay + Huber & 0.197033 & 0.453592 & 0.010850 & 0.060386 & 0.507704 &
 
 \section{Layer-wise representation diagnostics}
 
+Figure~\ref{fig:layerwise-cosine} reports the hook-based layer-wise representation diagnostic for the recommended checkpoints on both label sources.
+
 \begin{figure}[htbp]
 \centering
 \begin{minipage}[t]{0.49\textwidth}
@@ -178,6 +207,8 @@ HZW & T10 decay + Huber & 0.197033 & 0.453592 & 0.010850 & 0.060386 & 0.507704 &
 \end{figure}
 
 \section{E-series model lineage}
+
+Table~\ref{tab:e-lineage} lists the complete E1--E13 design lineage of the exploratory HZW stage summarized in Section~S3; as noted there, the E-series used an earlier data stage and is not directly comparable to the final T-series.
 
 \begin{table}[htbp]
 \centering
