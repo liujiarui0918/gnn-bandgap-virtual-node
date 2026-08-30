@@ -1,0 +1,22 @@
+\documentclass[border=1pt]{standalone}
+\usepackage{ctex}
+\usepackage{amsmath,bm}
+\usepackage{booktabs}
+\usepackage{array}
+\newcolumntype{P}[1]{>{\raggedright\arraybackslash}p{#1}}
+\begin{document}
+\fontsize{8}{9.5}\selectfont
+\begin{tabular}{P{1.75cm} P{5.35cm} P{5.35cm}}
+\toprule
+ & \textbf{PFGM++（2023）} & \textbf{Speed--Accuracy（2025）} \\
+\midrule
+物理来源 & 高维电静力学、Poisson 场、库仑定律 & Fokker--Planck、随机热力学、熵产生、最优传输 \\
+直接改动 & 扰动核、网络目标、反向 ODE 轨迹 & 前向扩散路径的评价与优化准则 \\
+核心旋钮 & 增广维数 $D$ & 噪声日程对应的分布速度 $v_2(t)$ \\
+理论结论 & $D=1$ 是 PFGM；$D\to\infty$ 是 diffusion & 生成误差响应受扩散速度/耗散上界约束 \\
+优化方向 & 在鲁棒性与学习刚性之间找有限 $D$ 甜点 & 让 $P_t$ 尽量沿 $W_2$ 测地线匀速运动 \\
+实验层级 & 标准图像生成与鲁棒性实验较完整 & 玩具分布 + 真实图像潜空间验证，偏理论诊断 \\
+主要局限 & $D$ 仍需调参；重尾分布可能难学 & 真正高维 OT 难算；上界小不保证网络估计必然完美 \\
+\bottomrule
+\end{tabular}
+\end{document}
