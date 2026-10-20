@@ -18,8 +18,8 @@
 \renewcommand{\thetable}{S\arabic{table}}
 \renewcommand{\thefigure}{S\arabic{figure}}
 
-\title{\bfseries Supplementary Information\\Robust Global Virtual-Node Graph Neural Networks for Crystal Band-Gap Prediction}
-\author{Jiarui Liu}
+\title{\bfseries Supplementary Information\\Robust Global Virtual-Node Graph Neural Networks for Crystal Band-Gap Prediction with Cross-Source Label Consistency Analysis}
+\author{Jiarui Liu\textsuperscript{1}, Junjie Liu\textsuperscript{1,*}, and Shunbo Hu\textsuperscript{1,*}}
 \date{July 2026}
 
 \begin{document}
@@ -273,7 +273,7 @@ HZW & T10\(-\)T4 & \(-0.0047\) & \([-0.0094,\,-0.0001]\) & 0.9780 & yes \\
 \end{tabular}
 \end{table}
 
-All five model pairs are reported on both label sources. The virtual-node gain (T4\(-\)T2) and the Huber gain (T7\(-\)T4) are each significant on both label sources, as is the combined gain (T7\(-\)T2: \(-0.0151\) eV on MP, \(-0.0181\) eV on HZW), whereas the decay effect (T10\(-\)T7) is statistically indistinguishable from zero on MP and marginal (and of opposite sign) on HZW.
+All five model pairs are reported on both label sources. The virtual-node gain (T4\(-\)T2) and the Huber gain (T7\(-\)T4) are each significant on both label sources, as is the combined gain (T7\(-\)T2: \(-0.0151\) eV on MP, \(-0.0181\) eV on HZW), whereas the decay effect (T10\(-\)T7) is not statistically resolved on either label source, with opposite signs in the seed-42 point estimates.
 
 \section{Cross-label evaluation}
 
@@ -309,7 +309,7 @@ ALIGNN+VN+Huber+decay (T10) & HZW & HZW & 0.1970 & 0.4536 \\
 \end{tabular}
 \end{table}
 
-The sign of the decay effect T10\(-\)T7 is fixed entirely by the training source and is independent of the evaluation label: models trained on MP have T10 MAE at or below T7 under both evaluation labels (\(-0.0012\) eV vs.\ MP labels, \(-0.0024\) eV vs.\ HZW labels), while models trained on HZW have T10 MAE above T7 under both evaluation labels (\(+0.0025\) eV vs.\ MP labels, \(+0.0030\) eV vs.\ HZW labels). Because the sign pattern follows the training signal rather than the scoring labels, broadcast decay acts as a training-dynamics effect, not a label-evaluation artifact. All entries are seed-42 checkpoints, and each of the four T10\(-\)T7 deltas individually lies within the paired-bootstrap noise band (Table~\ref{tab:paired-bootstrap}); the evidence is the consistent sign pattern across the \(2\times2\) matrix, not any single comparison. The ALIGNN baseline rows (T2) carry no decay comparison and are included for reference only.
+For the seed-42 checkpoints, the sign of the estimated T10\(-\)T7 MAE difference follows the training-label source under both evaluation labels: models trained on MP have T10 MAE at or below T7 under both evaluation labels (\(-0.0012\) eV vs.\ MP labels, \(-0.0024\) eV vs.\ HZW labels), while models trained on HZW have T10 MAE above T7 under both evaluation labels (\(+0.0025\) eV vs.\ MP labels, \(+0.0030\) eV vs.\ HZW labels). We computed a paired bootstrap (\(B=10{,}000\), bootstrap seed 20260714) for each of the four cross-label conditions, reusing the method of Table~\ref{tab:paired-bootstrap}; all four 95\% confidence intervals cross zero: MP-trained, MP eval \([-0.0058,\,+0.0033]\); MP-trained, HZW eval \([-0.0070,\,+0.0021]\); HZW-trained, MP eval \([-0.0015,\,+0.0066]\); HZW-trained, HZW eval \([-0.0011,\,+0.0071]\). All four comparisons are statistically unresolved. Their sign pattern suggests an association with the training-label source, but the comparisons reuse the same test structures and seed-42 checkpoints; they are not independent replications and do not establish a causal mechanism or seed-stable source dependence. All entries are seed-42 checkpoints. The ALIGNN baseline rows (T2) carry no decay comparison and are included for reference only.
 
 \section{Broadcast-decay training dynamics}
 
@@ -349,37 +349,37 @@ The separation between cohorts is weak: of the many chemical, structural and lab
 
 \begin{table}[htbp]
 \centering
-\caption{Re-evaluation on the strict label-consistent test subset. Models are trained on the relaxed lens (no retraining here); the split of the shared test set into a clean subset (\(n=7{,}958\)) and a noisy complement (\(n=497\)) uses the strict-clean rule \(\mathrm{MP\ is\_metal}=\mathrm{HZW\ is\_metal}\), \(|\Delta\mathrm{gap}|\le 0.5\) eV, and per-atom volume difference \(\le 8\%\). This isolates the evaluation-lens effect only. Data source: \textnormal{results/analysis/strict\_subset\_metrics.csv}.}
+\caption{Re-evaluation on the strict label-consistent test subset. Models are trained on the relaxed lens (no retraining here); the split of the shared test set into a consistent subset (\(n=7{,}958\)) and a label-inconsistent complement (\(n=497\)) uses the strict-clean rule \(\mathrm{MP\ is\_metal}=\mathrm{HZW\ is\_metal}\), \(|\Delta\mathrm{gap}|\le 0.5\) eV, and per-atom volume difference \(\le 8\%\). This isolates the evaluation-lens effect only. Data source: \textnormal{results/analysis/strict\_subset\_metrics.csv}.}
 \label{tab:strict-subset}
 \small
 \begin{tabular}{l l l r r r r}
 \toprule
 Source & Subset & Model & \(n\) & MAE & RMSE & Metal F1 \\
 \midrule
-MP  & clean & T2  & 7958 & 0.218563 & 0.448298 & 0.886568 \\
-MP  & clean & T4  & 7958 & 0.210476 & 0.462653 & 0.914788 \\
-MP  & clean & T7  & 7958 & 0.201537 & 0.459276 & 0.916610 \\
-MP  & clean & T10 & 7958 & 0.201038 & 0.455125 & 0.920820 \\
-MP  & noisy & T2  &  497 & 0.583984 & 0.937136 & 0.297872 \\
-MP  & noisy & T4  &  497 & 0.585480 & 0.960015 & 0.258065 \\
-MP  & noisy & T7  &  497 & 0.599517 & 0.967504 & 0.266667 \\
-MP  & noisy & T10 &  497 & 0.586329 & 0.943955 & 0.307692 \\
+MP  & consistent & T2  & 7958 & 0.218563 & 0.448298 & 0.886568 \\
+MP  & consistent & T4  & 7958 & 0.210476 & 0.462653 & 0.914788 \\
+MP  & consistent & T7  & 7958 & 0.201537 & 0.459276 & 0.916610 \\
+MP  & consistent & T10 & 7958 & 0.201038 & 0.455125 & 0.920820 \\
+MP  & inconsistent & T2  &  497 & 0.583984 & 0.937136 & 0.297872 \\
+MP  & inconsistent & T4  &  497 & 0.585480 & 0.960015 & 0.258065 \\
+MP  & inconsistent & T7  &  497 & 0.599517 & 0.967504 & 0.266667 \\
+MP  & inconsistent & T10 &  497 & 0.586329 & 0.943955 & 0.307692 \\
 \midrule
-HZW & clean & T2  & 7958 & 0.200683 & 0.419288 & 0.893901 \\
-HZW & clean & T4  & 7958 & 0.190553 & 0.432275 & 0.914632 \\
-HZW & clean & T7  & 7958 & 0.183472 & 0.431787 & 0.920596 \\
-HZW & clean & T10 & 7958 & 0.186014 & 0.439239 & 0.918113 \\
-HZW & noisy & T2  &  497 & 0.395317 & 0.648960 & 0.285714 \\
-HZW & noisy & T4  &  497 & 0.381229 & 0.657124 & 0.322581 \\
-HZW & noisy & T7  &  497 & 0.362593 & 0.629453 & 0.271186 \\
-HZW & noisy & T10 &  497 & 0.373480 & 0.641044 & 0.305085 \\
+HZW & consistent & T2  & 7958 & 0.200683 & 0.419288 & 0.893901 \\
+HZW & consistent & T4  & 7958 & 0.190553 & 0.432275 & 0.914632 \\
+HZW & consistent & T7  & 7958 & 0.183472 & 0.431787 & 0.920596 \\
+HZW & consistent & T10 & 7958 & 0.186014 & 0.439239 & 0.918113 \\
+HZW & inconsistent & T2  &  497 & 0.395317 & 0.648960 & 0.285714 \\
+HZW & inconsistent & T4  &  497 & 0.381229 & 0.657124 & 0.322581 \\
+HZW & inconsistent & T7  &  497 & 0.362593 & 0.629453 & 0.271186 \\
+HZW & inconsistent & T10 &  497 & 0.373480 & 0.641044 & 0.305085 \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-Training is on the relaxed lens throughout, so this table measures only the effect of the evaluation lens; it is complementary to a strict \emph{training} lens (which requires a GPU re-run). On MP, both architectural gains are masked by label noise: the virtual-node gain T4\(-\)T2 is \(-0.0081\) eV on the clean subset but \(+0.0015\) eV on the noisy complement, and the Huber gain T7\(-\)T4 is \(-0.0089\) eV (clean) but \(+0.0140\) eV (noisy). On HZW the direction differs and neither gain shrinks on the noisy complement: T4\(-\)T2 is \(-0.0101\) eV (clean) and \(-0.0141\) eV (noisy), and T7\(-\)T4 is \(-0.0071\) eV (clean) and \(-0.0186\) eV (noisy). Subset sizes differ, so only within-lens relative gains should be compared, not absolute MAE across subsets.
+Training is on the relaxed lens throughout, so this table measures only the effect of the evaluation lens; it is complementary to a strict \emph{training} lens (which requires a GPU re-run). On MP, both architectural gains are masked by the cross-source label disagreement concentrated in the inconsistent subset: the virtual-node gain T4\(-\)T2 is \(-0.0081\) eV on the consistent subset but \(+0.0015\) eV on the inconsistent complement, and the Huber gain T7\(-\)T4 is \(-0.0089\) eV (consistent) but \(+0.0140\) eV (inconsistent). On HZW the direction differs and neither gain shrinks on the inconsistent complement: T4\(-\)T2 is \(-0.0101\) eV (consistent) and \(-0.0141\) eV (inconsistent), and T7\(-\)T4 is \(-0.0071\) eV (consistent) and \(-0.0186\) eV (inconsistent). Subset sizes differ, so only within-lens relative gains should be compared, not absolute MAE across subsets.
 
-As the complementary strict \emph{training}-lens check, we retrained the virtual-node + Huber model directly on the strict-clean MP-label dataset (S-series run S14; identical architecture and training protocol to T7, and the Huber counterpart of the MSE-loss run S4 that already exists in the S series). S14 reaches a test MAE of 0.1936 eV (RMSE 0.4308, metal F1 0.9010, \(n=8{,}154\)), versus 0.2001 eV for S4. This single strict-lens run (one seed, like its S4 counterpart) reproduces a Huber gain (\(-0.0064\) eV) of the same size as the relaxed-lens T7\(-\)T4 gain on MP (\(-0.0076\) eV): the improvement survives when the aggressive-filtering noise channel is removed by construction, which argues against---though, being a single run, cannot definitively exclude---the possibility that the Huber gain merely reflects absorption of cross-source label noise specific to the relaxed dataset.
+As the complementary strict \emph{training}-lens check, we retrained the virtual-node + Huber model directly on the strict-clean MP-label dataset (S-series run S14; identical architecture and training protocol to T7, and the Huber counterpart of the MSE-loss run S4 that already exists in the S series). S14 reaches a test MAE of 0.1936 eV (RMSE 0.4308, metal F1 0.9010, \(n=8{,}154\)), versus 0.2001 eV for S4. This single strict-lens run (one seed, like its S4 counterpart) reproduces a Huber gain (\(-0.0064\) eV) of the same size as the relaxed-lens T7\(-\)T4 gain on MP (\(-0.0076\) eV): the improvement survives when the aggressive-filtering disagreement channel is removed by construction, which argues against---though, being a single run, cannot definitively exclude---the possibility that the Huber gain merely reflects absorption of cross-source label disagreement specific to the relaxed dataset.
 
 \section{Metal-F1 threshold sensitivity}
 
@@ -478,7 +478,7 @@ On the \(>80\)-atom subset the full-test-set diagnostic confirms and strengthens
 
 \section{Multi-seed replication}
 
-The six core models (T1 CGCNN, T2 ALIGNN, T3 M3GNet, T4 ALIGNN+VN, T7 ALIGNN+VN+Huber, T10 ALIGNN+VN+Huber+decay) were retrained from scratch on both label sources (MP and HZW) under three random seeds (42, 1042, 2042). Table~\ref{tab:multiseed} reports the per-seed test-set MAE together with the seed-averaged mean\,\(\pm\)\,standard deviation (sample standard deviation, \(\mathrm{ddof}=1\)). The two architectural improvements are directionally stable across all runs: the virtual-node gain (T4\(-\)T2) and the Huber-loss gain (T7\(-\)T4) are negative (i.e.\ improvements) for all three seeds on both label sources (3/3 in each case). The broadcast-decay step (T10\(-\)T7) is not directionally stable: on MP it averages \(-0.0004\pm0.0017\) (2/3 seeds negative) and on HZW \(+0.0018\pm0.0023\) (2/3 seeds positive), with a sign flip present on both sources. This mirrors the inconclusive verdict of the paired bootstrap test in the main paper.
+The six core models (T1 CGCNN, T2 ALIGNN, T3 M3GNet, T4 ALIGNN+VN, T7 ALIGNN+VN+Huber, T10 ALIGNN+VN+Huber+decay) were retrained from scratch on both label sources (MP and HZW) under three random seeds (42, 1042, 2042). Table~\ref{tab:multiseed} reports the per-seed test-set MAE together with the seed-averaged mean\,\(\pm\)\,standard deviation (sample standard deviation, \(\mathrm{ddof}=1\)). The two incremental improvements are directionally stable across all runs: the virtual-node gain (T4\(-\)T2) and the Huber-loss gain (T7\(-\)T4) are negative (i.e.\ improvements) for all three seeds on both label sources (3/3 in each case). The broadcast-decay step (T10\(-\)T7) is not directionally stable: on MP it averages \(-0.0004\pm0.0017\) (2/3 seeds negative) and on HZW \(+0.0018\pm0.0023\) (2/3 seeds positive), with a sign flip present on both sources. This mirrors the inconclusive verdict of the paired bootstrap test in the main paper.
 
 \begin{table}[htbp]
 \centering
@@ -560,7 +560,7 @@ Reference & (= \(\mathrm{min\_scale}=1\)) & T7 & 0.2249 & 0.1940 \\
 \end{tabular}
 \end{table}
 
-Two observations. First, the Huber conclusion is robust in sign: for every \(\beta\in\{0.25,0.5,1.0\}\) and on both label sources, T7 stays clearly below T4. The spread across \(\beta\) (up to 0.006 eV on MP) does exceed T7's seed-level standard deviation (0.0016 eV, Table~\ref{tab:multiseed}), and the single-seed \(\beta=0.25\) probe is in fact the best MP value in this sweep; we report this honestly rather than adopting it, because selecting \(\beta\) on test results would constitute post-hoc tuning---the paper's default \(\beta=0.5\) remains the a-priori choice, and the sweep's role is to show the Huber-over-MSE conclusion does not depend on it. Second, no decay floor rescues the broadcast-decay step: all T10 variants remain statistically indistinguishable from T7, and on HZW the MAE improves monotonically as \(\mathrm{min\_scale}\) increases towards the no-decay limit (0.1970 \(\to\) 0.1950 \(\to\) 0.1943 \(\to\) 0.1940 at T7), which independently supports the main-paper conclusion that the decay schedule contributes no reliable gain.
+Two observations. First, the Huber conclusion is robust in sign: for every \(\beta\in\{0.25,0.5,1.0\}\) and on both label sources, T7 stays clearly below T4. The spread across \(\beta\) (up to 0.006 eV on MP) does exceed T7's seed-level standard deviation (0.0016 eV, Table~\ref{tab:multiseed}), and the single-seed \(\beta=0.25\) probe is in fact the best MP value in this sweep; we retain the prespecified value rather than selecting a new value based on test-set performance, because doing so would constitute post-hoc tuning---the paper's default \(\beta=0.5\) remains the a-priori choice, and the sweep's role is to show the Huber-over-MSE conclusion does not depend on it. Second, no decay floor rescues the broadcast-decay step: none of the tested decay floors consistently outperforms T7 across both label sources, and on HZW the MAE improves monotonically as \(\mathrm{min\_scale}\) increases towards the no-decay limit (0.1970 \(\to\) 0.1950 \(\to\) 0.1943 \(\to\) 0.1940 at T7), which independently supports the main-paper conclusion that the decay schedule contributes no reliable gain.
 
 \section{M3GNet tuning probes}
 
@@ -586,5 +586,43 @@ T2 ALIGNN (reference) & --- & 0.2400 & 48/50 \\
 \end{table}
 
 None of the probes closes the gap to ALIGNN: the best variant (100 epochs) matches the baseline within seed noise (0.2867 vs.\ \(0.2897\pm0.0033\) across seeds, Table~\ref{tab:multiseed}), the lower learning rate is neutral-to-worse, and the wider model overfits and stops early with a clearly worse MAE. The \(\sim\)0.05 eV deficit relative to T2 therefore does not disappear under a larger budget, a gentler learning rate, or more capacity, so the deficit does not appear to be a tuning artifact under single-factor probes (single-seed probes, joint search out of scope), consistent with the main-paper reading that M3GNet's universal-potential-oriented design is less suited to this single-property band-gap regression setup.
+
+\section{Band-edge mask implementation and local input check}
+\label{sec:si-band-edge-mask}
+
+The historical E-series physics variants use one shared mask,
+\(m_i=\mathbf{1}(|\mathrm{CBM}_i|>10^{-8}\ \mathrm{or}\ |\mathrm{VBM}_i|>10^{-8})\),
+for both band-edge regression terms and the predicted-gap consistency term.
+The exporter converts missing or null entries to 0.0, without retaining
+separate validity flags. Neither the target extraction function nor the
+loss mask explicitly rejects NaN or infinity.
+
+We checked the current local raw HZW input using the E-series target
+extraction rule, before structure validation and train/validation/test
+assignment. There were 100,000 decodable records and two malformed lines;
+4,506 records had no band entry and four had a band gap above the exporter's
+15 eV limit. Among the remaining 95,490 target-eligible records, 52,001 had
+two finite non-zero band edges and 43,489 had two exact-zero band edges.
+No missing/null band-edge fields, single-edge cases, non-finite band-edge
+values, or non-zero band-edge magnitudes at or below \(10^{-8}\) were found
+in this checked population. The OR and AND rules therefore retain the
+same 52,001 records in this local input check. These counts describe the
+raw target-eligible population, not the final 84,550-structure T-series
+dataset. The original E-series training manifests were not available for
+comparison, so this check does not certify their exact sample membership.
+
+Isolated execution of the unchanged loss function with synthetic targets
+confirms its limitation: when one band edge is non-zero and the other is
+encoded as zero, the zero target still contributes a regression gradient;
+when one edge is NaN or infinity and the other passes the mask, the loss
+becomes non-finite. These are implementation boundary cases, not observed
+non-finite training examples. Numeric zeros alone cannot distinguish a
+physically valid zero from an upstream missing-value placeholder.
+
+A revised auxiliary objective would require separate presence-and-finiteness
+masks for CBM and VBM and would enable gap consistency only when both are
+valid. We have not applied that revision or retrained the historical
+physics variants; their reported metrics remain results of the original
+implementation. The recommended T4/T7 models do not use this auxiliary loss.
 
 \end{document}

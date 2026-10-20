@@ -93,7 +93,12 @@ def panel_label(ax, label: str) -> None:
 
 
 def load_results(dataset: str) -> pd.DataFrame:
-    path = ROOT / "results" / f"mp_hzw_relaxed_clean_equal_atoms_{dataset}_t" / "comparison_summary.csv"
+    path = (
+        ROOT
+        / "results"
+        / f"mp_hzw_relaxed_clean_equal_atoms_{dataset}_t"
+        / "comparison_summary.csv"
+    )
     df = pd.read_csv(path)
     df["id"] = df["experiment_name"].str.extract(r"^(T\d+)")
     return df.set_index("id")
@@ -163,7 +168,7 @@ def build_data_audit() -> None:
     # endpoint of the ledger is findable without reading the caption.
     filt = [
         ("Structure matched", 92787, SKY),
-        ("Gap-conflict removed", 84803, ORANGE),
+        ("After zero/nonzero\nconflict removal", 84803, ORANGE),
         ("Equal-atom subset", 84551, GREEN),
         ("Export-safe final\n(T-series population)", 84550, BLUE),
     ]
@@ -181,7 +186,10 @@ def build_data_audit() -> None:
 
     # --- Panel (a) ---
     ax = axes[0]
-    labels = [x[0].replace(" / ", " /\n").replace("Same class, ", "Same class,\n") for x in audit]
+    labels = [
+        x[0].replace(" / ", " /\n").replace("Same class, ", "Same class,\n")
+        for x in audit
+    ]
     values = [x[1] for x in audit]
     colors = [x[2] for x in audit]
     y = np.arange(len(audit))
@@ -190,7 +198,10 @@ def build_data_audit() -> None:
     ax.invert_yaxis()
     ax.set_xlim(0, 95462 * 1.20)
     ax.set_xlabel("Records")
-    ax.set_title("Audit conflict statistics\n(metal-like $\\leq$0.05 eV or is_metal / nonmetal $\\geq$0.10 eV)", fontsize=8.5)
+    ax.set_title(
+        "Audit conflict statistics\n(metal-like $\\leq$0.05 eV or is_metal / nonmetal $\\geq$0.10 eV)",
+        fontsize=8.5,
+    )
     for yi, value in zip(y, values):
         ax.text(value + 95462 * 0.015, yi, f"{value:,}", va="center", fontsize=7.5)
     ax.axhline(3.5, color=INK, linewidth=0.6, alpha=0.35)
@@ -220,7 +231,9 @@ def build_data_audit() -> None:
     ax.invert_yaxis()
     ax.set_xlim(0, 92787 * 1.16)
     ax.set_xlabel("Records")
-    ax.set_title("T-series actual filtering\n(zero-gap threshold 1e-6 eV)", fontsize=8.5)
+    ax.set_title(
+        "T-series actual filtering\n(zero-gap threshold 1e-6 eV)", fontsize=8.5
+    )
     for yi, value, note in zip(y, values, filt_notes):
         tag = f"{value:,}" + (f"  {note}" if note else "")
         ax.text(value + 92787 * 0.012, yi, tag, va="center", fontsize=7.5)
@@ -288,7 +301,9 @@ def build_main_results() -> None:
         ax.invert_yaxis()
         ax.set_xlabel("Test MAE (eV)")
         ax.set_title(title)
-        ax.axvline(df.loc["T2", "mae"], color=BLUE, linestyle="--", linewidth=0.8, alpha=0.7)
+        ax.axvline(
+            df.loc["T2", "mae"], color=BLUE, linestyle="--", linewidth=0.8, alpha=0.7
+        )
         ax.set_xlim(0.16, 0.40)
         for yi, value, err in zip(y, values, errs):
             ax.text(value + err + 0.005, yi, f"{value:.3f}", va="center", fontsize=8)
@@ -315,8 +330,14 @@ def build_main_results() -> None:
         axin = ax.inset_axes([0.50, 0.05, 0.48, 0.46])
         axin.barh(zy, zvalues, color=zcolors, height=0.60)
         axin.errorbar(
-            zvalues, zy, xerr=zerrs, fmt="none", ecolor=INK,
-            elinewidth=0.8, capsize=2.0, capthick=0.8,
+            zvalues,
+            zy,
+            xerr=zerrs,
+            fmt="none",
+            ecolor=INK,
+            elinewidth=0.8,
+            capsize=2.0,
+            capthick=0.8,
         )
         axin.set_yticks(zy, zoom_models)
         axin.invert_yaxis()
@@ -337,7 +358,11 @@ def build_main_results() -> None:
         for yi, value in zip(zy, zvalues):
             axin.text(value, yi, f" {value:.4f}", va="center", ha="left", fontsize=5.8)
 
-    comparisons = ["ALIGNN$\\to$+VN\n(global token)", "+VN$\\to$+Huber\n(robust loss)", "+Huber$\\to$+decay\n(broadcast)"]
+    comparisons = [
+        "ALIGNN$\\to$+VN\n(global token)",
+        "+VN$\\to$+Huber\n(robust loss)",
+        "+Huber$\\to$+decay\n(broadcast)",
+    ]
     gains = {
         "MP": [
             mp.loc["T2", "mae"] - mp.loc["T4", "mae"],
@@ -378,10 +403,24 @@ def build_main_results() -> None:
     panel_label(ax, "(c)")
     for xpos, value in zip(x - width / 2, gains["MP"]):
         offset = 0.001 if value >= 0 else 0.00035
-        ax.text(xpos, value + offset, f"{value:+.3f}", ha="center", va="bottom" if value >= 0 else "top", fontsize=7)
+        ax.text(
+            xpos,
+            value + offset,
+            f"{value:+.3f}",
+            ha="center",
+            va="bottom" if value >= 0 else "top",
+            fontsize=7,
+        )
     for xpos, value in zip(x + width / 2, gains["HZW"]):
         offset = 0.001 if value >= 0 else 0.00035
-        ax.text(xpos, value + offset, f"{value:+.3f}", ha="center", va="bottom" if value >= 0 else "top", fontsize=7)
+        ax.text(
+            xpos,
+            value + offset,
+            f"{value:+.3f}",
+            ha="center",
+            va="bottom" if value >= 0 else "top",
+            fontsize=7,
+        )
     ax.set_ylim(-0.0045, 0.014)
 
     # --- Row 2 (d)(e): T7 parity density (test split, log-count hexbin).
@@ -437,7 +476,9 @@ def build_main_results() -> None:
     shared_max = max(hb.get_array().max() for hb in hexbins)
     for hb in hexbins:
         hb.set_norm(LogNorm(vmin=1, vmax=shared_max))
-    print(f"[sanity] fig3(d,e) shared hexbin colour scale: 1 to {int(shared_max)} counts/cell")
+    print(
+        f"[sanity] fig3(d,e) shared hexbin colour scale: 1 to {int(shared_max)} counts/cell"
+    )
 
     # --- (f): residual distributions, MSE vs Huber virtual-node variants (MP).
     # Reviewer-facing change: the two filled semi-transparent histograms were
@@ -482,7 +523,9 @@ def build_main_results() -> None:
     # not steal width from either parity panel.
     box_d = axes[1, 0].get_position()
     box_e = axes[1, 1].get_position()
-    cax = fig.add_axes([box_e.x1 + 0.012, box_e.y0 + 0.02, 0.010, (box_d.y1 - box_d.y0) * 0.80])
+    cax = fig.add_axes(
+        [box_e.x1 + 0.012, box_e.y0 + 0.02, 0.010, (box_d.y1 - box_d.y0) * 0.80]
+    )
     cb = fig.colorbar(hexbins[-1], cax=cax)
     cb.set_label("Count per hexagon (shared scale)", fontsize=7.5)
     cb.ax.tick_params(labelsize=7)
@@ -490,11 +533,25 @@ def build_main_results() -> None:
 
 
 def build_mechanism_diagnostics() -> None:
-    summary = pd.read_csv(ROOT / "figures" / "huber_diagnostics" / "huber_residual_summary.csv")
+    summary = pd.read_csv(
+        ROOT / "figures" / "huber_diagnostics" / "huber_residual_summary.csv"
+    )
     # Full-test-set diagnostic (8,455 samples/source); the 240-sample pilot
     # lives in the un-suffixed oversmoothing_hooks_{mp,hzw} directories.
-    smooth_mp = pd.read_csv(ROOT / "results" / "analysis" / "oversmoothing_hooks_mp_full" / "oversmoothing_final_layer_summary.csv")
-    smooth_hzw = pd.read_csv(ROOT / "results" / "analysis" / "oversmoothing_hooks_hzw_full" / "oversmoothing_final_layer_summary.csv")
+    smooth_mp = pd.read_csv(
+        ROOT
+        / "results"
+        / "analysis"
+        / "oversmoothing_hooks_mp_full"
+        / "oversmoothing_final_layer_summary.csv"
+    )
+    smooth_hzw = pd.read_csv(
+        ROOT
+        / "results"
+        / "analysis"
+        / "oversmoothing_hooks_hzw_full"
+        / "oversmoothing_final_layer_summary.csv"
+    )
 
     fig, axes = plt.subplots(2, 2, figsize=(10.6, 7.0))
 
@@ -579,8 +636,12 @@ def build_mechanism_diagnostics() -> None:
     )
     x = np.arange(len(decay.columns) - 1)
     width = 0.36
-    ax.bar(x - width / 2, decay.loc[0, decay.columns[1:]], width, color=BLUE, label="MP")
-    ax.bar(x + width / 2, decay.loc[1, decay.columns[1:]], width, color=ORANGE, label="HZW")
+    ax.bar(
+        x - width / 2, decay.loc[0, decay.columns[1:]], width, color=BLUE, label="MP"
+    )
+    ax.bar(
+        x + width / 2, decay.loc[1, decay.columns[1:]], width, color=ORANGE, label="HZW"
+    )
     ax.axhline(0, color=INK, linewidth=0.8)
     ax.set_xticks(x, decay.columns[1:])
     ax.set_ylabel("$(+$decay$)$ $-$ $(+$Huber$)$ (eV)")
@@ -597,8 +658,20 @@ def build_mechanism_diagnostics() -> None:
     x = np.arange(len(models))
     width = 0.36
     for ax, metric, ylabel, title, letter in [
-        (axes[1, 0], "mean_pairwise_cosine", "Delta cosine", "Large-structure embedding similarity", "(c)"),
-        (axes[1, 1], "node_feature_variance", "Delta variance", "Large-structure node diversity", "(d)"),
+        (
+            axes[1, 0],
+            "mean_pairwise_cosine",
+            "Delta cosine",
+            "Large-structure embedding similarity",
+            "(c)",
+        ),
+        (
+            axes[1, 1],
+            "node_feature_variance",
+            "Delta variance",
+            "Large-structure node diversity",
+            "(d)",
+        ),
     ]:
         mp_values = smooth_deltas(smooth_mp, metric)
         hzw_values = smooth_deltas(smooth_hzw, metric)

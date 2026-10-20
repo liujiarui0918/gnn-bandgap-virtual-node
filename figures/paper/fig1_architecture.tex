@@ -72,7 +72,7 @@
 % model, so it is drawn as a detached dashed branch rather than inline.
 \node[module, draw=violet!62!black, fill=violet!5, text width=1.30cm, minimum width=1.64cm, font=\tiny, align=center] (decay) at (11.16,4.15) {T10 only:\\decay \(\gamma_t{:}\,1\!\rightarrow\!0.25\)};
 \draw[decaypath] (decay.south) -- (gtoken.east);
-\node[align=center] at (9.65,0.66) {\(\mathbf g^l=\tfrac{1}{n}\sum_i \mathbf h_i^l\)\\\(\mathbf h_i^{l+1}\!\leftarrow\!\mathbf h_i^{l+1}+\gamma_t\,\mathbf g^l\)\\\(\gamma_t\!\equiv\!1\) in T4/T7};
+\node[align=center] at (9.65,0.66) {\(\tilde{\mathbf h}_i^{\,l}\!=\!\mathbf h_i^{\,l}+\gamma_t\,\mathbf g^{l}\)\\\(\mathbf g^{l+1}\!=\!\mathbf g^{l}+\phi\!\big(\tfrac{1}{n}\textstyle\sum_i\tilde{\mathbf h}_i^{\,l}\big)\)\\\(\gamma_t\!\equiv\!1\) in T4/T7};
 
 % The global and local streams merge before the prediction head.
 \coordinate (joint) at (11.78,2.45);

@@ -56,10 +56,26 @@ MUTED = "#6B7280"
 # (pair label, MP delta/lo/hi, HZW delta/lo/hi). Transcribed from the paired
 # bootstrap table; delta = MAE(a) - MAE(b), so negative favours the first model.
 BOOTSTRAP = [
-    ("+VN vs ALIGNN\n(T4 $-$ T2)", (-0.0075, -0.0121, -0.0028), (-0.0104, -0.0147, -0.0060)),
-    ("+Huber vs +VN\n(T7 $-$ T4)", (-0.0076, -0.0122, -0.0029), (-0.0078, -0.0120, -0.0035)),
-    ("+VN+Huber vs ALIGNN\n(T7 $-$ T2)", (-0.0151, -0.0198, -0.0103), (-0.0181, -0.0224, -0.0138)),
-    ("+decay vs +Huber\n(T10 $-$ T7)", (-0.0012, -0.0058, +0.0033), (+0.0030, -0.0011, +0.0071)),
+    (
+        "+VN vs ALIGNN\n(T4 $-$ T2)",
+        (-0.0075, -0.0121, -0.0028),
+        (-0.0104, -0.0147, -0.0060),
+    ),
+    (
+        "+Huber vs +VN\n(T7 $-$ T4)",
+        (-0.0076, -0.0122, -0.0029),
+        (-0.0078, -0.0120, -0.0035),
+    ),
+    (
+        "+VN+Huber vs ALIGNN\n(T7 $-$ T2)",
+        (-0.0151, -0.0198, -0.0103),
+        (-0.0181, -0.0224, -0.0138),
+    ),
+    (
+        "+decay vs +Huber\n(T10 $-$ T7)",
+        (-0.0012, -0.0058, +0.0033),
+        (+0.0030, -0.0011, +0.0071),
+    ),
 ]
 
 # (model, MP mean/lo/hi, HZW mean/lo/hi) for the >80-atom subset, delta vs T2.
@@ -69,7 +85,11 @@ BOOTSTRAP = [
 OVERSMOOTHING = [
     ("ALIGNN+VN (T4)", (-0.0871, -0.1031, -0.0702), (-0.0906, -0.1054, -0.0760)),
     ("ALIGNN+VN+Huber (T7)", (-0.0872, -0.1028, -0.0715), (-0.0896, -0.1050, -0.0746)),
-    ("+broadcast decay (T10)", (-0.0859, -0.1016, -0.0697), (-0.0931, -0.1072, -0.0787)),
+    (
+        "+broadcast decay (T10)",
+        (-0.0859, -0.1016, -0.0697),
+        (-0.0931, -0.1072, -0.0787),
+    ),
 ]
 
 
@@ -79,7 +99,9 @@ def check_against_tables() -> None:
     for name, mp, hzw in BOOTSTRAP + OVERSMOOTHING:
         for source, (est, lo, hi) in (("MP", mp), ("HZW", hzw)):
             if not lo <= est <= hi:
-                raise ValueError(f"{name} [{source}]: estimate {est} outside CI [{lo}, {hi}]")
+                raise ValueError(
+                    f"{name} [{source}]: estimate {est} outside CI [{lo}, {hi}]"
+                )
 
     def excludes_zero(triple):
         _, lo, hi = triple
@@ -103,7 +125,9 @@ def check_against_tables() -> None:
     for name, mp, hzw in OVERSMOOTHING:
         for source, triple in (("MP", mp), ("HZW", hzw)):
             if not excludes_zero(triple) or triple[0] >= 0:
-                raise ValueError(f"{name} [{source}]: expected a resolved negative cosine delta")
+                raise ValueError(
+                    f"{name} [{source}]: expected a resolved negative cosine delta"
+                )
     print("[sanity] forest-plot values agree with the main and supplementary tables")
 
 
@@ -163,7 +187,7 @@ def main() -> None:
     forest(
         axes[0],
         BOOTSTRAP,
-        "$\\Delta$MAE (eV), 95\\% paired-bootstrap CI",
+        "$\\Delta$MAE (eV), 95% paired-bootstrap CI",
         "Which model differences are statistically resolved",
         "negative favours the newer variant; $B=10{,}000$ paired resamples of the shared test set "
         "($n=8{,}455$)",
@@ -171,16 +195,41 @@ def main() -> None:
     forest(
         axes[1],
         OVERSMOOTHING,
-        "$\\Delta$ mean pairwise cosine vs ALIGNN, 95\\% CI",
+        "$\\Delta$ mean pairwise cosine vs ALIGNN, 95% CI",
         "Large-structure embedding diversity ($>$80 atoms, $n=422$)",
         "negative = less embedding homogenization than the baseline; $B=2{,}000$ bootstrap resamples",
     )
 
     handles = [
-        Line2D([], [], color=BLUE, marker="o", markersize=6, linewidth=1.5, label="MP labels"),
-        Line2D([], [], color=ORANGE, marker="s", markersize=6, linewidth=1.5, label="HZW labels"),
-        Line2D([], [], color=MUTED, marker="o", markersize=6, markerfacecolor="white",
-               markeredgecolor=MUTED, linestyle="none", label="CI crosses zero (unresolved)"),
+        Line2D(
+            [],
+            [],
+            color=BLUE,
+            marker="o",
+            markersize=6,
+            linewidth=1.5,
+            label="MP labels",
+        ),
+        Line2D(
+            [],
+            [],
+            color=ORANGE,
+            marker="s",
+            markersize=6,
+            linewidth=1.5,
+            label="HZW labels",
+        ),
+        Line2D(
+            [],
+            [],
+            color=MUTED,
+            marker="o",
+            markersize=6,
+            markerfacecolor="white",
+            markeredgecolor=MUTED,
+            linestyle="none",
+            label="CI crosses zero (unresolved)",
+        ),
     ]
     fig.legend(
         handles=handles,
@@ -204,8 +253,15 @@ def main() -> None:
             color=INK,
         )
 
-    fig.savefig(OUT / "fig6_statistical_evidence.pdf", bbox_inches="tight", pad_inches=0.05)
-    fig.savefig(OUT / "fig6_statistical_evidence.png", dpi=240, bbox_inches="tight", pad_inches=0.05)
+    fig.savefig(
+        OUT / "fig6_statistical_evidence.pdf", bbox_inches="tight", pad_inches=0.05
+    )
+    fig.savefig(
+        OUT / "fig6_statistical_evidence.png",
+        dpi=240,
+        bbox_inches="tight",
+        pad_inches=0.05,
+    )
     plt.close(fig)
     print(f"Wrote fig6_statistical_evidence.[pdf|png] to {OUT}")
 

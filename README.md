@@ -33,8 +33,11 @@ Two label sources over the same structures:
   redistributable and are excluded from this repository**, along with all
   derived tables under `results/` that embed them.
 
-The MP identifier list plus the audit and export scripts here are sufficient to
-reproduce the MP-label results and the structure-first MP–HZW audit.
+The planned release of the MP subset and analysis code will support
+reproduction of the MP-label experiments and MP-side preprocessing.
+Reproducing the MP--HZW structure matching and cross-source
+label-consistency audit requires authorized access to the proprietary
+HZW records, subject to the provider's terms.
 
 ## Setup
 
