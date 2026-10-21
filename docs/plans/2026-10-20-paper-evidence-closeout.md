@@ -222,3 +222,11 @@ AI：按下列精确改动修订、运行本地检查和编译、呈现新 PDF �
 - 2026-10-20（本会话）：Task 8 完成：PyMuPDF 按内容定位改动页（主文 p1/5/6/8/14/17/18，SI p6/12/13），110 dpi 渲染并逐页目检：无文字裁切、遮挡、公式或标题溢出；`git diff --check` 对四份源文件 exit 0。
 - 当前状态：8 项任务全部完成。待作者最终验收：新 PDF 实际页面（截图在 `artifacts/paper_evidence_closeout_20261020/pages/`）、精确措辞（尤其 S22 辅助损失局限表述）、以及发布安排（公开仓库/DOI 仍未落实，文稿保留未来时表述）。
 - 遗留（不在本轮范围）：历史 E6/E13 训练 manifest 与全量 T-series manifest 未取得，文稿已如实限定核查范围；若决定改用独立 presence-and-finiteness 掩码并重训，需另立计划与算力授权。
+- 2026-10-20（作者指定）：Data and code availability 改为指向项目仓库 `github.com/liujiarui0918/gnn-bandgap-virtual-node`（`gh repo view` 确认 visibility=PRIVATE），措辞为"will be made public upon publication"，未虚构已上线状态；README 顶部同步说明该仓库即论文引用仓库。主文重新编译两遍 exit 0，22 页、无未定义引用，第 18 页目检通过。待作者发布时将仓库设为 Public 后，此段即可成立。
+- 2026-10-20（作者已设仓库为 Public）：`gh repo view` 确认 visibility=PUBLIC 且远端 main 与本地 HEAD（952dfab）一致；跟踪文件扫描确认无 results/、无 HZW 数据、无凭证文件。主文/README 措辞改为"已可用"现在时；两文各重编译两遍，零警告零未定义引用，渲染页已交付作者检查。
+- 2026-10-20（审稿意见 2+3 整改）：
+  - 事实核查：对本地原始 HZW 文件流式重算——100,002 行、2 行无法解析、4,506 无 band entry、4 条 gap>15、band-invalid 共 4,510、band-valid 缺 MP 交叉引用恰 29；与服务器审计产物 `results/data_quality/mp_hzw_garbage_summary.remote.json`（hzw_invalid_gap=4509、missing_mp=29、entering=95,462）比对：唯一差异是 band-invalid 边界差 1 条（4,510 vs 4,509），交叉引用数完全一致；两套排除规则（extract_target 与 valid_gap）逐条比对判定相同，且 Table 1 为顺序排除、两集合不相交，排除"重叠双重计数"（实际重叠 43 条但未被双计）。结论：服务器副本与本地副本差 1 条记录，非规则差异；T 系列 84,550 数据集服务器端构建，不受影响。
+  - 改动：Table 1 行说明改为顺序排除措辞（4,509 数字保留，来源是服务器审计产物）；S22 新增"Relationship to the audit counts"段，写明两副本差异与排除顺序；主文 availability 改为"MP 标签来自公共 Materials Project summary API（api.materialsproject.org/materials/summary/），按 id 查询、字段固定、无固定版本号为 2026-04-10 至 05-24 间快照；精确 id 集合来自 HZW 交叉引用不在公开发布内"；README Data 段同步。
+  - 验证：两文各重编译两遍 exit 0（主文 22 页、SI 13 页，零警告零未定义引用）；p4/p18/SI p12-13 渲染目检通过。
+- 2026-10-20（作者拍板：S22 统一成 4,509）：作者确认目标是"两边统一成 4,509"（非服务器新文件来源）。改法：S22 第一段的有效性计数改用审计口径"4,505 无 band entry + 4 条 gap>15 = 4,509 排除，95,491 合格"；band-edge 拆分 52,001+43,489 保留原值并显式标注为**本地副本**的测量（本地副本 95,490 合格，少 1 条，指向下方副本差异段）；第二段"本地副本 4,510 vs 审计 4,509 差 1 条"的披露保留。主文 OR 掩码段去掉具体总数，只写"checked target-eligible population"。注意：磁盘上本地文件实际重数仍为 4,506/4,510（两次独立重算确认），S22 的 4,505 是与服务器审计对齐的口径，不是本地文件重算值——此点已用"local copy 少 1 条"的披露覆盖，若日后从服务器核对原始文件发现 4,505 不成立，需回到 S22 修正。
+  - 验证：两文各重编译两遍 exit 0（22/13 页，零警告零未定义引用）；断言确认 S22 含 4,505、95,491、本地 95,490/4,510 披露、52,001/43,489 完好，主文无残留 95,490；SI p13 渲染目检通过。

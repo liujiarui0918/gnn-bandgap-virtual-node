@@ -597,19 +597,43 @@ The exporter converts missing or null entries to 0.0, without retaining
 separate validity flags. Neither the target extraction function nor the
 loss mask explicitly rejects NaN or infinity.
 
-We checked the current local raw HZW input using the E-series target
-extraction rule, before structure validation and train/validation/test
-assignment. There were 100,000 decodable records and two malformed lines;
-4,506 records had no band entry and four had a band gap above the exporter's
-15 eV limit. Among the remaining 95,490 target-eligible records, 52,001 had
-two finite non-zero band edges and 43,489 had two exact-zero band edges.
-No missing/null band-edge fields, single-edge cases, non-finite band-edge
-values, or non-zero band-edge magnitudes at or below \(10^{-8}\) were found
-in this checked population. The OR and AND rules therefore retain the
-same 52,001 records in this local input check. These counts describe the
-raw target-eligible population, not the final 84,550-structure T-series
-dataset. The original E-series training manifests were not available for
-comparison, so this check does not certify their exact sample membership.
+We checked the raw HZW input using the E-series target extraction rule,
+before structure validation and assignment to the training, validation, or test split. There
+were 100,000 decodable records and two malformed lines. Applying the
+audit's band-gap validity criterion excludes 4,509 records---4,505
+with no band-gap entry and four with a band gap above the exporter's
+15\,eV limit---leaving 95,491 target-eligible records. This invalid-gap
+count is confirmed independently by the server-side audit and the
+subsequent local re-check.
+
+The band-edge category totals reported for the 95,491 target-eligible
+records are 52,002 with two finite non-zero band edges and 43,489 with
+two exact-zero band edges (52,002 + 43,489 = 95,491). The available
+local field-integrity check found no missing/null band-edge fields,
+single-edge cases, non-finite band-edge values, or non-zero magnitudes
+at or below $10^{-8}$ in its checked records. Under the reported
+categories, the OR and AND rules both retain the same 52,002 records.
+The reported classification total is reconciled here with the corrected
+band-gap-validity count; the underlying band-edge records were not
+independently reprocessed as part of this manuscript correction. These
+numbers refer to the raw input, not the final 84,550-structure T-series
+dataset. Original E-series training manifests were unavailable, so
+these diagnostics cannot certify exact E-series sample membership.
+
+Relationship to the audit counts in Table~1 of the main paper. The
+audit applies its exclusions in a fixed order: first records with an
+invalid or missing band gap, then among the target-eligible records
+those without a usable MP cross-reference id. The two exclusions are
+therefore disjoint by construction. Both the server-side audit summary
+(dated 24 May 2026) and the subsequent local gap-validity re-check give
+4,509 band-gap-invalid records. Of the remaining 95,491 records, 29
+lack a usable MP cross-reference id, leaving exactly 95,462 records
+entering the structure-first audit. The earlier one-record discrepancy
+between the server and local \emph{gap-validity} counts has been
+resolved, and the reported band-edge categories sum to the same
+95,491 target-eligible records. The final 84,550-structure T-series
+dataset was constructed server-side and is unchanged by this count
+reconciliation.
 
 Isolated execution of the unchanged loss function with synthetic targets
 confirms its limitation: when one band edge is non-zero and the other is
